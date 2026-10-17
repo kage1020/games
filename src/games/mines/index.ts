@@ -19,9 +19,11 @@ export const mines: GameDefinition = {
     { id: "normal", label: "中級" },
   ],
   modeLabel: "難易度",
-  scoreLabel: "時間",
-  formatScore: formatDuration,
-  formatDelta: (diff) => ({ value: durationDelta(diff), unit: "秒" }),
+  score: {
+    label: "時間",
+    format: formatDuration,
+    delta: (diff) => ({ value: durationDelta(diff), unit: "秒" }),
+  },
   controls: [
     { text: "押して開く" },
     { text: "長押しか右クリックで旗" },

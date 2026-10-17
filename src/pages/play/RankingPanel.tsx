@@ -4,6 +4,7 @@ import { Button, EmptyState, Notice, Ranking, Segmented, Skeleton } from "@/desi
 import { useRanking } from "@/platform/ranking/useRanking.ts";
 import { settingsStore } from "@/platform/settings.ts";
 import { useStore } from "@/platform/store.ts";
+import { scoreFormat } from "@/sdk/score.ts";
 import type { GameDefinition } from "@/sdk/types.ts";
 
 const PERIODS: { value: Period; label: string }[] = [
@@ -24,6 +25,7 @@ export function RankingPanel({
   const [period, setPeriod] = useState<Period>("week");
   const ranking = useRanking(game.id, mode, period, version);
   const { name } = useStore(settingsStore);
+  const { format } = scoreFormat(game, mode);
   const aside = (
     <Segmented
       label="期間"
@@ -61,10 +63,10 @@ export function RankingPanel({
         rows={(data?.rows ?? []).map((row) => ({
           rank: row.rank,
           name: row.name,
-          score: game.formatScore(row.score),
+          score: format(row.score),
           me: row.me,
         }))}
-        me={data?.me ? { ...data.me, score: game.formatScore(data.me.score) } : null}
+        me={data?.me ? { ...data.me, score: format(data.me.score) } : null}
       >
         {body}
       </Ranking>

@@ -3,6 +3,7 @@ import { Play } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Button, Result, Stat } from "@/design-system/index.ts";
 import type { RecordOutcome } from "@/platform/records/records.ts";
+import { scoreFormat } from "@/sdk/score.ts";
 import type { GameDefinition, GameResult } from "@/sdk/types.ts";
 import { describeResult } from "./session.ts";
 
@@ -29,6 +30,8 @@ export function StartPanel({ game, onStart }: { game: GameDefinition; onStart: (
 }
 
 export interface FinishSummary {
+  /** その回を始めたときのモード */
+  mode: string;
   result: GameResult;
   outcome: Pick<RecordOutcome, "isFirst" | "isBest" | "isTie" | "previousBest">;
   ranks: Record<"today" | "week" | "all", RankPosition> | null;
@@ -47,14 +50,15 @@ export function ResultPanel({
 }) {
   const again = useInitialFocus<HTMLButtonElement>();
   const { result, outcome, ranks } = summary;
-  const { note, celebrate } = describeResult(result.score, outcome, game.formatScore, result.note);
+  const format = scoreFormat(game, summary.mode);
+  const { note, celebrate } = describeResult(result.score, outcome, format.format, result.note);
   const best =
     result.score !== null && (outcome.isBest || outcome.isFirst)
       ? result.score
       : outcome.previousBest;
   const delta =
     outcome.isBest && !outcome.isFirst && result.score !== null && outcome.previousBest !== null
-      ? (game.formatDelta?.(result.score - outcome.previousBest) ?? {
+      ? (format.delta?.(result.score - outcome.previousBest) ?? {
           value: result.score - outcome.previousBest,
         })
       : null;
@@ -63,10 +67,10 @@ export function ResultPanel({
   return (
     <div className="play-panel play-result">
       <Result
-        label={game.scoreLabel}
+        label={format.label}
         value={result.score ?? undefined}
         score={result.score === null ? "—" : undefined}
-        format={game.formatScore}
+        format={format.format}
         celebrate={celebrate}
         note={note}
         stats={
@@ -74,7 +78,7 @@ export function ResultPanel({
             {best !== null ? (
               <Stat
                 label="自己ベスト"
-                value={game.formatScore(best)}
+                value={format.format(best)}
                 delta={delta?.value}
                 deltaLabel={delta?.unit}
               />

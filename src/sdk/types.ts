@@ -41,9 +41,18 @@ export interface ControlHint {
   text: string;
 }
 
+export interface ScoreFormat {
+  label: string;
+  format(score: number): string;
+  /** 自己ベストとの差を Stat の delta に渡す値と単位にする */
+  delta?(diff: number): { value: number; unit?: string };
+}
+
 export interface GameMode {
   id: string;
   label: string;
+  /** 記録の種類がゲームのほかのモードと違うときだけ書く */
+  score?: ScoreFormat;
 }
 
 export interface GameDefinition {
@@ -61,10 +70,8 @@ export interface GameDefinition {
   timed: boolean;
   modes: GameMode[];
   modeLabel?: string;
-  scoreLabel: string;
-  formatScore(score: number): string;
-  /** 自己ベストとの差を Stat の delta に渡す値と単位にする */
-  formatDelta?(diff: number): { value: number; unit?: string };
+  /** 記録の名前と表し方。モードで変わるときは GameMode.score で上書きする */
+  score: ScoreFormat;
   controls: ControlHint[];
   Thumb: ComponentType;
   /** 遊ぶときに読み込むよう、ふつうは React.lazy で包む */

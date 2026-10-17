@@ -14,8 +14,7 @@ export const snake: GameDefinition = {
   aspect: "square",
   timed: true,
   modes: [{ id: "normal", label: "ふつう" }],
-  scoreLabel: "食べた数",
-  formatScore: (score) => String(score),
+  score: { label: "食べた数", format: (score) => String(score) },
   controls: [
     { keys: ["←", "→", "↑", "↓"], text: "で向きを変える" },
     { text: "スワイプでも曲がる" },

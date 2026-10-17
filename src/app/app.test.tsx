@@ -55,8 +55,7 @@ function fakeGame(overrides: Partial<GameDefinition>): GameDefinition {
     aspect: "square",
     timed: true,
     modes: [{ id: "normal", label: "ふつう" }],
-    scoreLabel: "食べた数",
-    formatScore: (score) => String(score),
+    score: { label: "食べた数", format: (score) => String(score) },
     controls: [{ keys: ["←"], text: "で曲がる" }],
     Thumb: () => <svg aria-hidden="true" />,
     Game: FakeGame,
@@ -257,6 +256,30 @@ describe("play robustness", () => {
     await screen.findByRole("button", { name: "もう一度" });
     await act(async () => releaseFirst({ best: 5, ranks: RANKS }));
     expect(screen.queryByText("今週の順位")).not.toBeInTheDocument();
+  });
+
+  it("AC-U18 formats scores with the selected mode's format", async () => {
+    const twoFormats = fakeGame({
+      id: "mines",
+      title: "マインスイーパー",
+      modes: [
+        { id: "easy", label: "初級" },
+        {
+          id: "normal",
+          label: "中級",
+          score: { label: "広さ", format: (score) => `${score} マス` },
+        },
+      ],
+    });
+    act(() => {
+      settingsStore.set((current) => ({ ...current, modes: { mines: "normal" } }));
+    });
+    renderApp("/mines", { games: [twoFormats] });
+    expect(await screen.findByText("18 マス")).toBeInTheDocument();
+    await startGame();
+    await act(async () => finishGame?.(42));
+    expect(await screen.findByText("広さ")).toBeInTheDocument();
+    expect(screen.getAllByText("42 マス").length).toBeGreaterThan(0);
   });
 
   it("AC-U15 records under the mode the run started with", async () => {

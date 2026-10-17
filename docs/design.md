@@ -71,6 +71,7 @@ interface GameProps {
 - 描画は SVG（`viewBox` で伸縮、色はトークンの CSS 変数）。地は `bg`、図形と文字は `ink`、空きは `border` の点、カーソルは `focus` の 2px の枠、色味は `accent`、系列は `series-1`〜`4`（番号・形・言葉を必ず添える）。
 - 操作は Stage の `controls` に書く。キーボードとポインター（タッチ）の両方で遊べる。
 - `score: null` は記録の残らない終わり（地雷を踏んだなど）。
+- 記録の名前と表し方は `GameDefinition.score`（`{ label, format, delta? }`）に書く。モードで記録の種類が変わるときは `GameMode.score` で上書きする。
 
 ## 記録・ランキング・引き継ぎ
 
@@ -195,6 +196,7 @@ interface GameProps {
 - AC-U15 遊んでいる間に別のタブでモードを変えても、その回は始めたときのモードで記録する。
 - AC-U16 帯のサイト名は `games.kage1020.com` で、一覧へのリンクになる。文書のタイトルは一覧では `games.kage1020.com`、ほかの画面では `<画面の名前> — games.kage1020.com`。
 - AC-U17 保存したモードがそのゲームにない（モードの id を変えた・減らした）ときは、ゲームの最初のモードを選ぶ。
+- AC-U18 記録の名前と表し方はモードごとに変えられる。モードに `score` があればそれを、なければゲームの `score` を、結果・自己ベスト・ランキング・最近の記録・一覧・この端末の記録で使う。
 
 ## AC-O 送信待ち（`src/platform/ranking/outbox.ts`）
 - AC-O1 送信待ちは古い順に送り、送れたものは消す。

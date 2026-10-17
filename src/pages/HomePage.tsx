@@ -6,6 +6,7 @@ import { getModeRecord } from "@/platform/records/records.ts";
 import { recordsStore } from "@/platform/records/store.ts";
 import { selectedMode, settingsStore } from "@/platform/settings.ts";
 import { useStore } from "@/platform/store.ts";
+import { scoreFormat } from "@/sdk/score.ts";
 import type { GameDefinition, Genre } from "@/sdk/types.ts";
 
 type Filter = "all" | Genre;
@@ -31,7 +32,7 @@ export function HomePage() {
   const meta = (game: GameDefinition) => {
     const mode = selectedMode(settings, game);
     const best = getModeRecord(records, game.id, mode).best;
-    const last = best === null ? game.duration : `ベスト ${game.formatScore(best)}`;
+    const last = best === null ? game.duration : `ベスト ${scoreFormat(game, mode).format(best)}`;
     return `${game.genre} · ${game.players} · ${last}`;
   };
 

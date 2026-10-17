@@ -22,6 +22,7 @@ import { getModeRecord } from "@/platform/records/records.ts";
 import { importServerBests, recordsStore } from "@/platform/records/store.ts";
 import { settingsStore, type ThemePreference } from "@/platform/settings.ts";
 import { useStore } from "@/platform/store.ts";
+import { scoreFormat } from "@/sdk/score.ts";
 
 const THEMES: { value: ThemePreference; label: string }[] = [
   { value: "system", label: "端末に合わせる" },
@@ -213,7 +214,7 @@ function LocalRecords() {
         {
           id: `${game.id}-${mode.id}`,
           game: game.modes.length > 1 ? `${game.title}（${mode.label}）` : game.title,
-          best: record.best === null ? "—" : game.formatScore(record.best),
+          best: record.best === null ? "—" : scoreFormat(game, mode.id).format(record.best),
           plays: `${record.plays} 回`,
         },
       ];

@@ -15,9 +15,11 @@ export const zip: GameDefinition = {
   aspect: "square",
   timed: true,
   modes: [{ id: "normal", label: "ふつう" }],
-  scoreLabel: "時間",
-  formatScore: formatDuration,
-  formatDelta: (diff) => ({ value: durationDelta(diff), unit: "秒" }),
+  score: {
+    label: "時間",
+    format: formatDuration,
+    delta: (diff) => ({ value: durationDelta(diff), unit: "秒" }),
+  },
   controls: [
     { text: "ドラッグで線を引く" },
     { keys: ["←", "→", "↑", "↓"], text: "で進む" },

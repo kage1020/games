@@ -14,8 +14,7 @@ export const memory: GameDefinition = {
   aspect: "wide",
   timed: false,
   modes: [{ id: "normal", label: "ふつう" }],
-  scoreLabel: "覚えた数",
-  formatScore: (score) => String(score),
+  score: { label: "覚えた数", format: (score) => String(score) },
   controls: [
     { text: "数字を小さい順に押す" },
     { keys: ["←", "→", "↑", "↓"], text: "で選ぶ" },

@@ -1,9 +1,17 @@
 import { EmptyState, SectionHead } from "@/design-system/index.ts";
 import { formatPlayedAt } from "@/platform/format.ts";
 import type { ModeRecord } from "@/platform/records/records.ts";
-import type { GameDefinition } from "@/sdk/types.ts";
+import type { GameDefinition, ScoreFormat } from "@/sdk/types.ts";
 
-export function RecentPlays({ game, record }: { game: GameDefinition; record: ModeRecord }) {
+export function RecentPlays({
+  game,
+  record,
+  format,
+}: {
+  game: GameDefinition;
+  record: ModeRecord;
+  format: ScoreFormat;
+}) {
   const now = Date.now();
   return (
     <section className="play-recent" aria-labelledby={`${game.id}-recent`}>
@@ -17,7 +25,7 @@ export function RecentPlays({ game, record }: { game: GameDefinition; record: Mo
           {record.recent.map((play) => (
             <li key={play.at} className="recent-row">
               <span className="recent-when">{formatPlayedAt(play.at, now)}</span>
-              <span className="recent-score">{game.formatScore(play.score)}</span>
+              <span className="recent-score">{format.format(play.score)}</span>
             </li>
           ))}
         </ol>

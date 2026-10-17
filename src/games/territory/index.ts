@@ -19,8 +19,7 @@ export const territory: GameDefinition = {
     { id: "p4", label: "4人" },
   ],
   modeLabel: "人数",
-  scoreLabel: "自分のマス",
-  formatScore: (score) => `${score}`,
+  score: { label: "自分のマス", format: (score) => `${score}` },
   controls: [
     { keys: ["←", "→", "↑", "↓"], text: "で向きを変える" },
     { text: "スワイプでも曲がる" },

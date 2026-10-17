@@ -32,6 +32,7 @@ import { selectedMode, settingsStore, toggleFavorite } from "@/platform/settings
 import { createSound } from "@/platform/sound.ts";
 import { useStore } from "@/platform/store.ts";
 import { randomSeed } from "@/sdk/rng.ts";
+import { scoreFormat } from "@/sdk/score.ts";
 import type { GameDefinition, GameResult, HudItem } from "@/sdk/types.ts";
 import { NotFoundPage } from "../NotFoundPage.tsx";
 import { type FinishSummary, ResultPanel, StartPanel } from "./panels.tsx";
@@ -137,7 +138,7 @@ function Play({ game }: { game: GameDefinition }) {
         at,
       });
       recordsStore.set(outcome.records);
-      setSummary({ result, outcome, ranks: null });
+      setSummary({ mode: runMode, result, outcome, ranks: null });
       dispatch({ type: "finish", result });
       if (outcome.isBest && !outcome.isFirst) sound.play("clear");
       const score = result.score;
@@ -156,13 +157,14 @@ function Play({ game }: { game: GameDefinition }) {
   );
 
   const share = async () => {
-    const result = summary?.result;
-    if (!result || result.score === null) {
+    const score = summary?.result.score ?? null;
+    if (!summary || score === null) {
       showNotice({ message: "共有できる記録がない。" });
       return;
     }
+    const { label, format } = scoreFormat(game, summary.mode);
     const url = `${window.location.origin}/${game.id}`;
-    const text = `${game.title}で ${game.scoreLabel} ${game.formatScore(result.score)} を記録した。`;
+    const text = `${game.title}で ${label} ${format(score)} を記録した。`;
     try {
       if (navigator.share) {
         await navigator.share({ text, url });
@@ -180,6 +182,7 @@ function Play({ game }: { game: GameDefinition }) {
   };
 
   const modeRecord = getModeRecord(records, game.id, mode);
+  const modeFormat = scoreFormat(game, mode);
   const favorite = settings.favorites.includes(game.id);
 
   let screen = null;
@@ -287,12 +290,12 @@ function Play({ game }: { game: GameDefinition }) {
         <div className="play-stats">
           <Stat
             label="自己ベスト"
-            value={modeRecord.best === null ? "—" : game.formatScore(modeRecord.best)}
+            value={modeRecord.best === null ? "—" : modeFormat.format(modeRecord.best)}
           />
           <Stat label="遊んだ回数" value={String(modeRecord.plays)} unit="回" />
         </div>
         <RankingPanel game={game} mode={mode} version={rankingVersion} />
-        <RecentPlays game={game} record={modeRecord} />
+        <RecentPlays game={game} record={modeRecord} format={modeFormat} />
       </aside>
     </main>
   );

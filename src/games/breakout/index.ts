@@ -14,8 +14,7 @@ export const breakout: GameDefinition = {
   aspect: "square",
   timed: true,
   modes: [{ id: "normal", label: "ふつう" }],
-  scoreLabel: "崩した数",
-  formatScore: (score) => String(score),
+  score: { label: "崩した数", format: (score) => String(score) },
   controls: [
     { keys: ["←", "→"], text: "で動かす" },
     { keys: ["Space"], text: "で打ち出す" },
