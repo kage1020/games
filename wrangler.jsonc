@@ -1,0 +1,34 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "games",
+  "main": "./worker/index.ts",
+  "compatibility_date": "2026-10-12",
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "games",
+      "database_id": "ad24460e-af74-4904-9bea-7a4d904c4863",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "ratelimits": [
+    {
+      "name": "WRITE_LIMITER",
+      "namespace_id": "1020",
+      "simple": { "limit": 30, "period": 60 }
+    }
+  ],
+  "observability": {
+    "enabled": true
+  },
+  "routes": [
+    {
+      "pattern": "game.kage1020.com",
+      "custom_domain": true
+    }
+  ]
+}
