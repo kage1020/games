@@ -14,6 +14,7 @@
     "check:fix": "biome check --write .",
     "typecheck": "tsc -b",
     "tokens": "node scripts/build-tokens.ts",
+    "og": "node scripts/build-og.ts",
     "cf:types": "wrangler types",
     "db:migrate:local": "wrangler d1 migrations apply games --local",
     "db:migrate:remote": "wrangler d1 migrations apply games --remote",
@@ -36,6 +37,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
     "@cloudflare/vite-plugin": "^1.64.0",
+    "@resvg/resvg-js": "^2.6.2",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",
