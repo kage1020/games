@@ -14,6 +14,7 @@
       "!!**/node_modules",
       "!!**/dist",
       "!!src/design-system/vendor",
+      "!!src/design-system/tokens.css",
       "!!worker-configuration.d.ts"
     ]
   },
