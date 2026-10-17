@@ -27,7 +27,7 @@ export function Thumb() {
                 width={CELL - 1.5}
                 height={CELL - 1.5}
                 rx={1.5}
-                style={{ fill: "var(--bg-subtle)", stroke: "var(--line)", strokeWidth: 0.5 }}
+                style={{ fill: "var(--fill)", stroke: "var(--line)", strokeWidth: 0.5 }}
               />
               {mark === "F" ? (
                 <g transform={`scale(${CELL / 100})`}>

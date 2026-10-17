@@ -7,7 +7,7 @@ export const territory: GameDefinition = {
   title: "陣取り",
   summary: "マスを塗って広げる",
   description:
-    "通ったマスが自分のものになる。自分のマスでぐるりと囲んだマスもまとめて取れる。60 秒でいちばん多く持っていた人の勝ち。",
+    "通ったマスが自分のものになる。自分のマスでぐるりと囲んだマスもまとめて取れる。P1 があなたで、ほかは CPU。60 秒でいちばん多く持っていた人の勝ち。",
   genre: "アクション",
   players: "2〜4人",
   duration: "1分",
@@ -24,7 +24,6 @@ export const territory: GameDefinition = {
   controls: [
     { keys: ["←", "→", "↑", "↓"], text: "で向きを変える" },
     { text: "画面を払っても曲がる" },
-    { text: "P1 があなた。ほかは CPU" },
   ],
   Thumb,
   Game: lazy(() => import("./Game.tsx")),

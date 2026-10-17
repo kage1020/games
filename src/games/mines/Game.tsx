@@ -250,7 +250,7 @@ export default function MinesGame({ mode, seed, paused, sound, onHud, onFinish }
                   width={CELL - 8}
                   height={CELL - 8}
                   rx={6}
-                  style={{ fill: "var(--bg-subtle)", stroke: "var(--line)", strokeWidth: 1 }}
+                  style={{ fill: "var(--fill)", stroke: "var(--line)", strokeWidth: 1 }}
                   vectorEffect="non-scaling-stroke"
                 />
                 {flagged ? <Flag /> : null}
