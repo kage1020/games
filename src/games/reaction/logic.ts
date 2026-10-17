@@ -47,7 +47,9 @@ export function signal(state: ReactionState, at: number): ReactionState {
 export function press(state: ReactionState, at: number): ReactionState {
   if (state.phase === "waiting") return { ...state, phase: "early" };
   if (state.phase !== "signal" || state.signalAt === null) return state;
-  const time = Math.max(0, Math.round(at - state.signalAt));
+  // 合図の描画と同じ頃に届いた入力は、押した時刻で合図の前か後かを決める
+  if (at < state.signalAt) return { ...state, phase: "early", signalAt: null };
+  const time = Math.round(at - state.signalAt);
   const times = [...state.times, time];
   return { ...state, times, last: time, phase: times.length >= ROUNDS ? "over" : "result" };
 }

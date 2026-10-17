@@ -5,6 +5,8 @@ import { type ApiClient, ApiRequestError } from "./client.ts";
 import { outbox, type PendingScore } from "./outbox.ts";
 
 const RETRYABLE = new Set(["network", "internal", "too_many_requests"]);
+/** サーバーは同じゲームの記録を 2 秒あけてから受け付ける */
+const RESEND_DELAY = 2_500;
 
 function withName(score: PendingScore): PendingScore {
   const name = settingsStore.get().name;
@@ -26,7 +28,7 @@ export async function submitScore(
   const code = ensureCode();
   try {
     const response = await api.submitScore(code, withName(score));
-    void flushPending(api);
+    setTimeout(() => void flushPending(api), RESEND_DELAY);
     return response;
   } catch (error) {
     if (error instanceof ApiRequestError && RETRYABLE.has(error.code)) outbox.add(score);

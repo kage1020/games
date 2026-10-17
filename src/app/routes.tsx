@@ -4,6 +4,7 @@ import { LinkProvider } from "@/design-system/index.ts";
 import { HomePage } from "@/pages/HomePage.tsx";
 import { NotFoundPage } from "@/pages/NotFoundPage.tsx";
 import { PlayPage } from "@/pages/play/PlayPage.tsx";
+import { RouteError } from "@/pages/RouteError.tsx";
 import { SettingsPage } from "@/pages/SettingsPage.tsx";
 import { NoticeArea } from "@/platform/notices.tsx";
 import { useApi } from "@/platform/ranking/context.tsx";
@@ -40,10 +41,15 @@ export const routes: RouteObject[] = [
   {
     element: <RootLayout />,
     children: [
-      { index: true, element: <HomePage /> },
-      { path: "settings", element: <SettingsPage /> },
-      { path: ":gameId", element: <PlayPage /> },
-      { path: "*", element: <NotFoundPage /> },
+      {
+        errorElement: <RouteError />,
+        children: [
+          { index: true, element: <HomePage /> },
+          { path: "settings", element: <SettingsPage /> },
+          { path: ":gameId", element: <PlayPage /> },
+          { path: "*", element: <NotFoundPage /> },
+        ],
+      },
     ],
   },
 ];

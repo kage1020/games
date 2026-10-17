@@ -25,8 +25,8 @@ function parsePending(raw: string | null): PendingScore[] {
   }
 }
 
-/** 後で送り直せば通る失敗。それ以外（不正な記録など）は捨てる */
-const RETRYABLE = new Set(["network", "internal", "too_many_requests"]);
+/** 通信やサーバーの不具合。ここで止めて、次のきっかけで送り直す */
+const STOP = new Set(["network", "internal"]);
 
 export function createOutbox(key: string) {
   const store = createPersistentStore(key, parsePending);
@@ -38,13 +38,18 @@ export function createOutbox(key: string) {
     store.set((items) => items.filter((pending) => !same(pending, item)));
 
   async function run(send: (item: PendingScore) => Promise<unknown>): Promise<void> {
+    // 続けて送りすぎと断られたゲームは、この回は飛ばしてほかのゲームを送る
+    const refused = new Set<string>();
     for (const item of store.get()) {
+      if (refused.has(item.game)) continue;
       try {
         await send(item);
         remove(item);
       } catch (error) {
-        if (error instanceof ApiRequestError && RETRYABLE.has(error.code)) return;
-        remove(item);
+        const code = error instanceof ApiRequestError ? error.code : null;
+        if (code === null || STOP.has(code)) return;
+        if (code === "too_many_requests") refused.add(item.game);
+        else remove(item);
       }
     }
   }

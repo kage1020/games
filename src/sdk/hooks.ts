@@ -1,7 +1,8 @@
 import { type RefObject, useEffect, useEffectEvent } from "react";
 import type { Direction } from "./grid.ts";
 
-const MAX_STEP = 50;
+/** 重いフレームでも時間は数えるが、ありえない飛び（復帰直後など）は 1 歩に抑える */
+const MAX_STEP = 250;
 
 /** requestAnimationFrame で step(経過ミリ秒) を呼ぶ。running が false の間は止まる */
 export function useGameLoop(step: (dt: number) => void, running: boolean): void {
@@ -11,7 +12,6 @@ export function useGameLoop(step: (dt: number) => void, running: boolean): void 
     let last: number | null = null;
     let frame = 0;
     const tick = (time: number) => {
-      // タブを離れた後などの大きな飛びは 1 歩ぶんに抑える
       const dt = last === null ? 0 : Math.min(time - last, MAX_STEP);
       last = time;
       if (dt > 0) onFrame(dt);

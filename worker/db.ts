@@ -43,13 +43,18 @@ export async function findPlayerName(db: Db, key: string): Promise<string | null
   return row?.name ?? null;
 }
 
+function defaultName(key: string): string {
+  return `guest-${key.slice(0, 4)}`;
+}
+
+/** name が null なら、新しいプレイヤーには既定の名前を付け、いるプレイヤーの名前は変えない */
 export async function upsertPlayer(
   db: Db,
   key: string,
   name: string | null,
   now: number,
 ): Promise<string> {
-  const fallback = `guest-${key.slice(0, 4)}`;
+  const fallback = defaultName(key);
   await db
     .prepare(
       `INSERT INTO players (key, name, created_at, updated_at) VALUES (?, ?, ?, ?)
@@ -58,6 +63,19 @@ export async function upsertPlayer(
     .bind(key, name ?? fallback, now, now, name, now)
     .run();
   return (await findPlayerName(db, key)) ?? fallback;
+}
+
+/** 名前を既定の名前に戻す */
+export async function resetPlayerName(db: Db, key: string, now: number): Promise<string> {
+  const name = defaultName(key);
+  await db
+    .prepare(
+      `INSERT INTO players (key, name, created_at, updated_at) VALUES (?, ?, ?, ?)
+       ON CONFLICT (key) DO UPDATE SET name = excluded.name, updated_at = excluded.updated_at`,
+    )
+    .bind(key, name, now, now)
+    .run();
+  return name;
 }
 
 /** 同じゲームの直前の記録から cooldown ミリ秒たっていなければ入れずに false を返す。確かめと書き込みを 1 文で行う */

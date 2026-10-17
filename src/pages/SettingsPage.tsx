@@ -31,23 +31,24 @@ const THEMES: { value: ThemePreference; label: string }[] = [
 function NameField() {
   const api = useApi();
   const { name } = useStore(settingsStore);
-  const [draft, setDraft] = useState(name ?? "");
+  // 入力している間だけ下書きを持つ。それ以外はいまの名前を出す（別の操作で変わっても古い名前で上書きしない）
+  const [draft, setDraft] = useState<string | null>(null);
+  const shown = draft ?? name ?? "";
 
-  const save = () => {
-    const next = normalizeName(draft);
-    setDraft(next ?? "");
+  const sync = (value: string | null) => {
+    void api.putName(ensureCode(), value).catch(() => undefined);
+  };
+
+  const commit = (text: string) => {
+    const next = normalizeName(text);
     if (next === name) return;
     const previous = name;
     settingsStore.set((current) => ({ ...current, name: next }));
-    const sync = (value: string | null) => {
-      if (value) void api.putName(ensureCode(), value).catch(() => undefined);
-    };
     sync(next);
     showNotice({
       message: next ? `名前を「${next}」にした。` : "名前を消した。ランキングでは guest で出る。",
       onUndo: () => {
         settingsStore.set((current) => ({ ...current, name: previous }));
-        setDraft(previous ?? "");
         sync(previous);
       },
     });
@@ -57,13 +58,21 @@ function NameField() {
     <Input
       id="name"
       label="名前"
-      value={draft}
+      value={shown}
       placeholder="guest"
-      hint={`ランキングに出る名前。${nameLengthHint(draft)}。`}
+      hint={`ランキングに出る名前。${nameLengthHint(shown)}。`}
+      onFocus={() => setDraft(name ?? "")}
       onChange={(event) => setDraft(event.target.value)}
-      onBlur={save}
+      onBlur={() => {
+        if (draft !== null) commit(draft);
+        setDraft(null);
+      }}
       onKeyDown={(event) => {
-        if (event.key === "Enter") save();
+        // 日本語入力で変換を確定する Enter は保存しない
+        if (event.key !== "Enter" || event.nativeEvent.isComposing || event.keyCode === 229) return;
+        if (draft === null) return;
+        commit(draft);
+        setDraft(normalizeName(draft) ?? "");
       }}
       autoComplete="nickname"
     />
@@ -127,7 +136,7 @@ function TransferPanel() {
       showNotice({
         message: "記録を引き継いだ。",
         onUndo: () => {
-          if (previous.code) identityStore.set(previous.code);
+          identityStore.set(previous.code);
           recordsStore.set(previous.records);
           settingsStore.set((settings) => ({ ...settings, name: previous.name }));
         },

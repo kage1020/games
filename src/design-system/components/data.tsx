@@ -115,6 +115,17 @@ function RankRow({ row }: { row: RankingRow }) {
   );
 }
 
+/** 同じ順位・同じ名前・同じ記録の行があっても重ならない key を付ける */
+function withKeys(rows: RankingRow[]): { key: string; row: RankingRow }[] {
+  const seen = new Map<string, number>();
+  return rows.map((row) => {
+    const base = `${row.rank}|${String(row.name)}|${String(row.score)}`;
+    const count = seen.get(base) ?? 0;
+    seen.set(base, count + 1);
+    return { key: `${base}|${count}`, row };
+  });
+}
+
 /** 順位の一覧。圏外でも自分の行を下に固定して出す。children は行の代わりに出す（読み込み中・空など） */
 export function Ranking({ rows, me, title, aside, className, children }: RankingProps) {
   const mine = me && !rows.some((row) => row.me) ? me : null;
@@ -127,8 +138,8 @@ export function Ranking({ rows, me, title, aside, className, children }: Ranking
       ) : null}
       {children ?? (
         <ol className="kg-rank-list">
-          {rows.map((row) => (
-            <RankRow key={`${row.rank}-${String(row.name)}`} row={row} />
+          {withKeys(rows).map(({ key, row }) => (
+            <RankRow key={key} row={row} />
           ))}
           {mine ? (
             <>

@@ -387,6 +387,22 @@ a {
   flex: 1 1 18em;
 }
 
+/* ---------- 読み込めなかった ---------- */
+.route-error {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.route-error h1 {
+  margin: 0;
+}
+
+.route-error-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
 /* ---------- 知らせ ---------- */
 .notice-area {
   position: fixed;

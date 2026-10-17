@@ -321,6 +321,15 @@ describe("/api/me", () => {
     expect((await app.call("GET", "/api/me", { code })).json.name).toBe("Mina Aoki");
   });
 
+  it("AC-W10 resets to the default name with null", async () => {
+    const code = generateCode();
+    await app.call("PUT", "/api/me", { code, body: { name: "Mina" } });
+    const reset = await app.call("PUT", "/api/me", { code, body: { name: null } });
+    expect(reset.status).toBe(200);
+    expect(reset.json.name).toMatch(/^guest-[0-9a-f]{4}$/);
+    expect((await app.call("GET", "/api/me", { code })).json.name).toBe(reset.json.name);
+  });
+
   it("AC-W10 rejects an empty name", async () => {
     const response = await app.call("PUT", "/api/me", {
       code: generateCode(),

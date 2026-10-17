@@ -55,6 +55,8 @@ function Play({ game }: { game: GameDefinition }) {
   const records = useStore(recordsStore);
   const mode = settings.modes[game.id] ?? game.modes[0]?.id ?? "normal";
   const [session, dispatch] = useReducer(sessionReducer, game.timed, createSession);
+  // 始めたときのモード。遊んでいる間に別のタブで変わっても、この回はこれで記録する
+  const [runMode, setRunMode] = useState(mode);
   const [hud, setHud] = useState<HudItem[]>([]);
   const [summary, setSummary] = useState<FinishSummary | null>(null);
   const [rankingVersion, setRankingVersion] = useState(0);
@@ -90,9 +92,29 @@ function Play({ game }: { game: GameDefinition }) {
     if (session.status === "playing") screenRef.current?.focus({ preventScroll: true });
   }, [session.status]);
 
+  // 遊んでいる間にマウスでほかのボタンを押しても、キー操作はゲームに戻す
+  useEffect(() => {
+    if (!playing) return;
+    const refocus = () => screenRef.current?.focus({ preventScroll: true });
+    const onClick = (event: MouseEvent) => {
+      if (event.detail === 0) return;
+      const target = event.target;
+      if (!(target instanceof Element) || screenRef.current?.contains(target)) return;
+      if (target.closest(".kg-stage-bar, a, input, textarea, select")) return;
+      refocus();
+    };
+    document.addEventListener("click", onClick);
+    document.addEventListener("fullscreenchange", refocus);
+    return () => {
+      document.removeEventListener("click", onClick);
+      document.removeEventListener("fullscreenchange", refocus);
+    };
+  }, [playing]);
+
   const start = () => {
     setHud([]);
     setSummary(null);
+    setRunMode(mode);
     dispatch({ type: session.status === "ready" ? "start" : "restart" });
   };
 
@@ -108,7 +130,7 @@ function Play({ game }: { game: GameDefinition }) {
       const at = Date.now();
       const outcome = recordPlay(recordsStore.get(), {
         game: game.id,
-        mode,
+        mode: runMode,
         order: CATALOG[game.id].order,
         score: result.score,
         at,
@@ -118,13 +140,18 @@ function Play({ game }: { game: GameDefinition }) {
       dispatch({ type: "finish", result });
       if (outcome.isBest && !outcome.isFirst) sound.play("clear");
       const score = result.score;
-      if (score === null || !isValidScore(game.id, mode, score)) return;
-      void submitScore(api, { game: game.id, mode, score, at }).then((response) => {
-        if (response) setSummary((current) => current && { ...current, ranks: response.ranks });
+      if (score === null || !isValidScore(game.id, runMode, score)) return;
+      void submitScore(api, { game: game.id, mode: runMode, score, at }).then((response) => {
+        // 遅れて届いた前の回の応答は、いまの結果に書き込まない
+        if (response) {
+          setSummary((current) =>
+            current?.result === result ? { ...current, ranks: response.ranks } : current,
+          );
+        }
         setRankingVersion((version) => version + 1);
       });
     },
-    [api, game.id, mode, sound],
+    [api, game.id, runMode, sound],
   );
 
   const share = async () => {
@@ -166,7 +193,7 @@ function Play({ game }: { game: GameDefinition }) {
       <Suspense fallback={<Skeleton lines={1} height="100%" className="play-loading" />}>
         <game.Game
           key={session.run}
-          mode={mode}
+          mode={runMode}
           paused={session.status === "paused"}
           seed={seed}
           sound={sound}

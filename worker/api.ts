@@ -11,6 +11,7 @@ import {
   playerBests,
   playerPositions,
   ranking,
+  resetPlayerName,
   upsertPlayer,
 } from "./db.ts";
 import { ApiError, errorResponse, json, readJson } from "./http.ts";
@@ -116,6 +117,10 @@ const getMe: Handler = async (request, deps) => {
 const putMe: Handler = async (request, deps) => {
   const key = await requirePlayerKey(request);
   const body = await readJson(request);
+  if (body.name === null) {
+    await checkLimit(deps, request, key);
+    return json({ name: await resetPlayerName(deps.db, key, deps.now()) });
+  }
   const name = typeof body.name === "string" ? normalizeName(body.name) : null;
   if (name === null) throw new ApiError("invalid_request");
   await checkLimit(deps, request, key);

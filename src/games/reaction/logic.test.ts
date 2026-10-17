@@ -67,6 +67,12 @@ describe("reaction", () => {
     expect(retry.delay).toBeGreaterThanOrEqual(MIN_DELAY);
   });
 
+  it("AC-G-reaction-2 treats a press stamped before the signal as early even if handled after it", () => {
+    const rng = createRng(5);
+    const shown = signal(createReaction(rng, 0), 2_000);
+    expect(press(shown, 1_990)).toMatchObject({ phase: "early", times: [] });
+  });
+
   it("AC-G-reaction-3 records the milliseconds from the signal to the press", () => {
     const rng = createRng(4);
     const shown = signal(createReaction(rng, 0), 2_000);

@@ -59,7 +59,7 @@ describe("api client", () => {
 describe("outbox", () => {
   const submission = (score: number) => ({ game: "memory", mode: "normal", score, at: score });
 
-  it("sends queued scores in order and forgets the sent ones", async () => {
+  it("AC-O1 sends queued scores in order and forgets the sent ones", async () => {
     const outbox = createOutbox("test:outbox");
     outbox.add(submission(1));
     outbox.add(submission(2));
@@ -71,8 +71,8 @@ describe("outbox", () => {
     expect(outbox.pending()).toEqual([]);
   });
 
-  it("keeps scores that can succeed later and stops there", async () => {
-    for (const code of ["network", "internal", "too_many_requests"] as const) {
+  it("AC-O2 stops and keeps everything when the network or the server fails", async () => {
+    for (const code of ["network", "internal"] as const) {
       const outbox = createOutbox(`test:outbox:${code}`);
       outbox.add(submission(1));
       outbox.add(submission(2));
@@ -85,7 +85,21 @@ describe("outbox", () => {
     }
   });
 
-  it("drops scores the server will never accept and continues", async () => {
+  it("AC-O3 skips a game refused for sending too fast and keeps sending other games", async () => {
+    const outbox = createOutbox("test:outbox:skip");
+    outbox.add(submission(1));
+    outbox.add(submission(2));
+    outbox.add({ game: "snake", mode: "normal", score: 3, at: 3 });
+    const tried: number[] = [];
+    await outbox.flush(async (item) => {
+      tried.push(item.score);
+      if (item.game === "memory") throw new ApiRequestError("too_many_requests");
+    });
+    expect(tried).toEqual([1, 3]);
+    expect(outbox.pending().map((item) => item.score)).toEqual([1, 2]);
+  });
+
+  it("AC-O4 drops scores the server will never accept and continues", async () => {
     const outbox = createOutbox("test:outbox:drop");
     outbox.add(submission(1));
     outbox.add(submission(2));

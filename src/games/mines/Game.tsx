@@ -121,6 +121,13 @@ export default function MinesGame({ mode, seed, paused, sound, onHud, onFinish }
     press.current = null;
   }, [paused]);
 
+  useEffect(
+    () => () => {
+      if (press.current) window.clearTimeout(press.current.timer);
+    },
+    [],
+  );
+
   useGameKeys((event) => {
     const direction = directionFromKey(event.key);
     if (direction) {

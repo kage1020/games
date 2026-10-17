@@ -1,5 +1,5 @@
 import type { MeResponse, RankingResponse, ScoreResponse } from "@shared/api.ts";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it, vi } from "vitest";
@@ -31,7 +31,7 @@ function fakeApi(overrides: Partial<ApiClient> = {}): ApiClient {
       }),
     ),
     getMe: vi.fn(async (): Promise<MeResponse> => ({ name: "Mina", bests: [] })),
-    putName: vi.fn(async (_code: string, name: string) => ({ name })),
+    putName: vi.fn(async (_code: string, name: string | null) => ({ name: name ?? "guest-0000" })),
     ...overrides,
   };
 }
@@ -212,5 +212,116 @@ describe("settings", () => {
     expect(await screen.findByText(/このコードの記録が見つからない。/)).toBeInTheDocument();
     expect(field).toHaveAttribute("aria-invalid", "true");
     expect(identityStore.get()).toBe(before);
+  });
+});
+
+describe("play robustness", () => {
+  it("AC-U12 returns keys to the game after a mouse click on another button", async () => {
+    renderApp("/snake", { games: [fakeGame({})] });
+    await startGame();
+    await userEvent.click(screen.getByRole("button", { name: "お気に入り" }));
+    expect(document.activeElement).toBe(document.querySelector(".kg-stage-screen"));
+  });
+
+  it("AC-U13 keeps the header and offers a reload when a screen fails to load", async () => {
+    const Broken = () => {
+      throw new Error("chunk failed");
+    };
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    renderApp("/snake", { games: [fakeGame({ Game: Broken })] });
+    await userEvent.click(await screen.findByRole("button", { name: "はじめる" }));
+    expect(await screen.findByText(/画面を読み込めなかった。/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "読み込み直す" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "記録と設定" })).toBeInTheDocument();
+    spy.mockRestore();
+  });
+
+  it("AC-U14 ignores a late ranking response from the previous run", async () => {
+    mediaMatches.set("(prefers-reduced-motion: reduce)", true);
+    let releaseFirst: (response: ScoreResponse) => void = () => {};
+    const submitScore = vi
+      .fn<ApiClient["submitScore"]>()
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            releaseFirst = resolve;
+          }),
+      )
+      .mockRejectedValueOnce(new ApiRequestError("network"));
+    renderApp("/snake", { games: [fakeGame({})], api: fakeApi({ submitScore }) });
+    await startGame();
+    await act(async () => finishGame?.(5));
+    await userEvent.click(await screen.findByRole("button", { name: "もう一度" }));
+    await screen.findByText("動いている");
+    await act(async () => finishGame?.(7));
+    await screen.findByRole("button", { name: "もう一度" });
+    await act(async () => releaseFirst({ best: 5, ranks: RANKS }));
+    expect(screen.queryByText("今週の順位")).not.toBeInTheDocument();
+  });
+
+  it("AC-U15 records under the mode the run started with", async () => {
+    const twoModes = fakeGame({
+      id: "mines",
+      title: "地雷",
+      modes: [
+        { id: "easy", label: "初級" },
+        { id: "normal", label: "中級" },
+      ],
+    });
+    renderApp("/mines", { games: [twoModes] });
+    await startGame();
+    act(() => {
+      settingsStore.set((current) => ({ ...current, modes: { mines: "normal" } }));
+    });
+    await act(async () => finishGame?.(9_000));
+    expect(recordsStore.get().mines?.easy?.best).toBe(9_000);
+    expect(recordsStore.get().mines?.normal).toBeUndefined();
+  });
+});
+
+describe("settings robustness", () => {
+  it("AC-U10 does not save while an IME is composing", async () => {
+    renderApp("/settings");
+    const input = await screen.findByRole("textbox", { name: "名前" });
+    await userEvent.type(input, "かげ");
+    fireEvent.keyDown(input, { key: "Enter", isComposing: true });
+    expect(settingsStore.get().name).toBeNull();
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(settingsStore.get().name).toBe("かげ");
+  });
+
+  it("AC-U10 shows the current name and never writes back a stale one", async () => {
+    const api = fakeApi();
+    renderApp("/settings", { api });
+    const input = await screen.findByRole("textbox", { name: "名前" });
+    act(() => {
+      settingsStore.set((current) => ({ ...current, name: "Mina" }));
+    });
+    expect(input).toHaveValue("Mina");
+    await userEvent.click(input);
+    await userEvent.tab();
+    expect(settingsStore.get().name).toBe("Mina");
+    expect(api.putName).not.toHaveBeenCalled();
+  });
+
+  it("AC-U10 sends the reset to the server when the name is cleared or undone", async () => {
+    const api = fakeApi();
+    renderApp("/settings", { api });
+    const input = await screen.findByRole("textbox", { name: "名前" });
+    await userEvent.type(input, "mina");
+    await userEvent.tab();
+    await userEvent.click(await screen.findByRole("button", { name: "元に戻す" }));
+    expect(api.putName).toHaveBeenLastCalledWith(expect.any(String), null);
+  });
+
+  it("AC-U11 undo on a device that had no code returns to no code", async () => {
+    const code = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+    renderApp("/settings");
+    expect(identityStore.get()).toBeNull();
+    const field = await screen.findByRole("textbox", { name: "別の端末のコード" });
+    await userEvent.type(field, code);
+    await userEvent.click(screen.getByRole("button", { name: "引き継ぐ" }));
+    await userEvent.click(await screen.findByRole("button", { name: "元に戻す" }));
+    expect(identityStore.get()).toBeNull();
   });
 });

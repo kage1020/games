@@ -35,7 +35,8 @@ export interface ApiClient {
   submitScore(code: string, submission: ScoreSubmission): Promise<ScoreResponse>;
   getRanking(query: RankingQuery, code: string | null): Promise<RankingResponse>;
   getMe(code: string): Promise<MeResponse>;
-  putName(code: string, name: string): Promise<{ name: string }>;
+  /** null は既定の名前に戻す */
+  putName(code: string, name: string | null): Promise<{ name: string }>;
 }
 
 type Fetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
