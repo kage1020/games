@@ -6,5 +6,6 @@
     "jsx": "react-jsx",
     "types": ["vite/client", "@testing-library/jest-dom/vitest"]
   },
-  "include": ["src", "shared"]
+  "include": ["src", "shared"],
+  "exclude": ["shared/**/*.test.ts"]
 }

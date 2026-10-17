@@ -1,0 +1,173 @@
+import type { PlayerBest, RankingEntry, RankPosition } from "@shared/api.ts";
+import { CATALOG, type GameId, type ScoreOrder } from "@shared/catalog.ts";
+
+/** D1Database のうち、ここで使う形だけ */
+export interface DbStatement {
+  bind(...values: unknown[]): DbStatement;
+  first<T = Record<string, unknown>>(): Promise<T | null>;
+  all<T = Record<string, unknown>>(): Promise<{ results: T[] }>;
+  run(): Promise<unknown>;
+}
+
+export interface Db {
+  prepare(query: string): DbStatement;
+  batch<T = unknown>(statements: DbStatement[]): Promise<{ results: T[] }[]>;
+}
+
+interface Board {
+  game: GameId;
+  mode: string;
+  since: number;
+}
+
+const aggregate = (order: ScoreOrder) => (order === "desc" ? "MAX" : "MIN");
+const direction = (order: ScoreOrder) => (order === "desc" ? "DESC" : "ASC");
+
+/** プレイヤーごとの最良と順位。order は目録の定数からしか来ない */
+function rankedCte(order: ScoreOrder): string {
+  return `WITH bests AS (
+      SELECT player_key, ${aggregate(order)}(score) AS best
+      FROM scores WHERE game = ? AND mode = ? AND played_at >= ?
+      GROUP BY player_key
+    ),
+    ranked AS (
+      SELECT player_key, best, RANK() OVER (ORDER BY best ${direction(order)}) AS rank
+      FROM bests
+    )`;
+}
+
+export async function findPlayerName(db: Db, key: string): Promise<string | null> {
+  const row = await db.prepare("SELECT name FROM players WHERE key = ?").bind(key).first<{
+    name: string;
+  }>();
+  return row?.name ?? null;
+}
+
+export async function upsertPlayer(
+  db: Db,
+  key: string,
+  name: string | null,
+  now: number,
+): Promise<string> {
+  const fallback = `guest-${key.slice(0, 4)}`;
+  await db
+    .prepare(
+      `INSERT INTO players (key, name, created_at, updated_at) VALUES (?, ?, ?, ?)
+       ON CONFLICT (key) DO UPDATE SET name = COALESCE(?, players.name), updated_at = ?`,
+    )
+    .bind(key, name ?? fallback, now, now, name, now)
+    .run();
+  return (await findPlayerName(db, key)) ?? fallback;
+}
+
+export async function lastScoreAt(db: Db, key: string, game: GameId): Promise<number | null> {
+  const row = await db
+    .prepare(
+      "SELECT created_at FROM scores WHERE player_key = ? AND game = ? ORDER BY created_at DESC LIMIT 1",
+    )
+    .bind(key, game)
+    .first<{ created_at: number }>();
+  return row?.created_at ?? null;
+}
+
+export async function insertScore(
+  db: Db,
+  values: { key: string; game: GameId; mode: string; score: number; playedAt: number; now: number },
+): Promise<void> {
+  await db
+    .prepare(
+      "INSERT INTO scores (game, mode, player_key, score, played_at, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+    )
+    .bind(values.game, values.mode, values.key, values.score, values.playedAt, values.now)
+    .run();
+}
+
+export async function playerBest(db: Db, key: string, game: GameId, mode: string): Promise<number> {
+  const row = await db
+    .prepare(
+      `SELECT ${aggregate(CATALOG[game].order)}(score) AS best FROM scores WHERE player_key = ? AND game = ? AND mode = ?`,
+    )
+    .bind(key, game, mode)
+    .first<{ best: number }>();
+  return row?.best ?? 0;
+}
+
+function positionStatement(db: Db, board: Board, key: string): DbStatement {
+  return db
+    .prepare(
+      `${rankedCte(CATALOG[board.game].order)}
+       SELECT COALESCE((SELECT rank FROM ranked WHERE player_key = ?), 0) AS rank,
+              (SELECT COUNT(*) FROM ranked) AS total`,
+    )
+    .bind(board.game, board.mode, board.since, key);
+}
+
+export async function playerPositions(
+  db: Db,
+  boards: Board[],
+  key: string,
+): Promise<RankPosition[]> {
+  const results = await db.batch<RankPosition>(
+    boards.map((board) => positionStatement(db, board, key)),
+  );
+  return results.map(({ results: [row] }) => ({ rank: row?.rank ?? 0, total: row?.total ?? 0 }));
+}
+
+export async function ranking(
+  db: Db,
+  board: Board,
+  key: string | null,
+  limit: number,
+): Promise<{ rows: (RankingEntry & { me: boolean })[]; me: RankingEntry | null; total: number }> {
+  const cte = rankedCte(CATALOG[board.game].order);
+  const params = [board.game, board.mode, board.since];
+  const [top, mine, count] = await db.batch<Record<string, number | string>>([
+    db
+      .prepare(
+        `${cte}
+         SELECT r.rank AS rank, r.best AS score, p.name AS name, r.player_key = ? AS me
+         FROM ranked r JOIN players p ON p.key = r.player_key
+         ORDER BY r.rank, p.created_at LIMIT ?`,
+      )
+      .bind(...params, key ?? "", limit),
+    db
+      .prepare(
+        `${cte}
+         SELECT r.rank AS rank, r.best AS score, p.name AS name
+         FROM ranked r JOIN players p ON p.key = r.player_key WHERE r.player_key = ?`,
+      )
+      .bind(...params, key ?? ""),
+    db.prepare(`${cte} SELECT COUNT(*) AS total FROM ranked`).bind(...params),
+  ]);
+  const mineRow = mine?.results[0];
+  return {
+    rows: (top?.results ?? []).map((row) => ({
+      rank: Number(row.rank),
+      score: Number(row.score),
+      name: String(row.name),
+      me: Number(row.me) === 1,
+    })),
+    me: mineRow
+      ? { rank: Number(mineRow.rank), score: Number(mineRow.score), name: String(mineRow.name) }
+      : null,
+    total: Number(count?.results[0]?.total ?? 0),
+  };
+}
+
+export async function playerBests(db: Db, key: string): Promise<PlayerBest[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT game, mode, MAX(score) AS high, MIN(score) AS low, COUNT(*) AS plays
+       FROM scores WHERE player_key = ? GROUP BY game, mode`,
+    )
+    .bind(key)
+    .all<{ game: GameId; mode: string; high: number; low: number; plays: number }>();
+  return results
+    .filter((row) => row.game in CATALOG)
+    .map((row) => ({
+      game: row.game,
+      mode: row.mode,
+      best: CATALOG[row.game].order === "desc" ? row.high : row.low,
+      plays: row.plays,
+    }));
+}

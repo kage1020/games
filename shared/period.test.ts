@@ -11,9 +11,7 @@ describe("periodStart", () => {
     expect(periodStart("today", at("2026-10-16T23:59:59+09:00"))).toBe(
       at("2026-10-16T00:00:00+09:00"),
     );
-    expect(periodStart("today", at("2026-10-16T15:00:00Z"))).toBe(
-      at("2026-10-17T00:00:00+09:00"),
-    );
+    expect(periodStart("today", at("2026-10-16T15:00:00Z"))).toBe(at("2026-10-17T00:00:00+09:00"));
   });
 
   it("AC-S10 the week starts on Monday at midnight in Japan", () => {

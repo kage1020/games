@@ -4,7 +4,7 @@ const BYTES = 20;
 
 export const CODE_LENGTH = (BYTES * 8) / 5;
 
-type FillRandom = (bytes: Uint8Array) => Uint8Array;
+type FillRandom = (bytes: Uint8Array<ArrayBuffer>) => Uint8Array<ArrayBuffer>;
 
 const fillRandom: FillRandom = (bytes) => crypto.getRandomValues(bytes);
 

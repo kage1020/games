@@ -22,7 +22,9 @@ describe("transfer code", () => {
     const code = generateCode();
     const messy = ` ${formatCode(code).toLowerCase()} `.replace(/-/g, " - ");
     expect(normalizeCode(messy)).toBe(code);
-    const fullWidth = code.replace(/[0-9A-Z]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0xfee0));
+    const fullWidth = code.replace(/[0-9A-Z]/g, (c) =>
+      String.fromCharCode(c.charCodeAt(0) + 0xfee0),
+    );
     expect(normalizeCode(fullWidth)).toBe(code);
   });
 
