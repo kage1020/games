@@ -7,7 +7,6 @@ import {
   type Db,
   findPlayerName,
   insertScore,
-  lastScoreAt,
   playerBest,
   playerBests,
   playerPositions,
@@ -29,9 +28,14 @@ const MAX_LIMIT = 50;
 
 type Handler = (request: Request, deps: ApiDeps) => Promise<Response>;
 
-async function checkLimit(deps: ApiDeps, key: string): Promise<void> {
-  const { success } = await deps.limiter.limit({ key });
-  if (!success) throw new ApiError("too_many_requests");
+/** プレイヤーの鍵は手元で作り直せるので、送り元のアドレスでも数える */
+async function checkLimit(deps: ApiDeps, request: Request, key: string): Promise<void> {
+  const address = request.headers.get("cf-connecting-ip") ?? "unknown";
+  const results = await Promise.all([
+    deps.limiter.limit({ key: `player:${key}` }),
+    deps.limiter.limit({ key: `ip:${address}` }),
+  ]);
+  if (results.some((result) => !result.success)) throw new ApiError("too_many_requests");
 }
 
 function playedAt(at: unknown, now: number): number {
@@ -52,14 +56,20 @@ const postScore: Handler = async (request, deps) => {
   ) {
     throw new ApiError("invalid_request");
   }
-  await checkLimit(deps, key);
+  await checkLimit(deps, request, key);
   const now = deps.now();
-  const last = await lastScoreAt(deps.db, key, game);
-  if (last !== null && now - last < COOLDOWN) throw new ApiError("too_many_requests");
-
   const name = typeof body.name === "string" ? normalizeName(body.name) : null;
   await upsertPlayer(deps.db, key, name, now);
-  await insertScore(deps.db, { key, game, mode, score, playedAt: playedAt(body.at, now), now });
+  const inserted = await insertScore(deps.db, {
+    key,
+    game,
+    mode,
+    score,
+    playedAt: playedAt(body.at, now),
+    now,
+    cooldown: COOLDOWN,
+  });
+  if (!inserted) throw new ApiError("too_many_requests");
 
   const best = await playerBest(deps.db, key, game, mode);
   const positions = await playerPositions(
@@ -108,7 +118,7 @@ const putMe: Handler = async (request, deps) => {
   const body = await readJson(request);
   const name = typeof body.name === "string" ? normalizeName(body.name) : null;
   if (name === null) throw new ApiError("invalid_request");
-  await checkLimit(deps, key);
+  await checkLimit(deps, request, key);
   return json({ name: await upsertPlayer(deps.db, key, name, deps.now()) });
 };
 

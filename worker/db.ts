@@ -6,7 +6,7 @@ export interface DbStatement {
   bind(...values: unknown[]): DbStatement;
   first<T = Record<string, unknown>>(): Promise<T | null>;
   all<T = Record<string, unknown>>(): Promise<{ results: T[] }>;
-  run(): Promise<unknown>;
+  run(): Promise<{ meta: { changes: number } }>;
 }
 
 export interface Db {
@@ -60,26 +60,40 @@ export async function upsertPlayer(
   return (await findPlayerName(db, key)) ?? fallback;
 }
 
-export async function lastScoreAt(db: Db, key: string, game: GameId): Promise<number | null> {
-  const row = await db
-    .prepare(
-      "SELECT created_at FROM scores WHERE player_key = ? AND game = ? ORDER BY created_at DESC LIMIT 1",
-    )
-    .bind(key, game)
-    .first<{ created_at: number }>();
-  return row?.created_at ?? null;
-}
-
+/** 同じゲームの直前の記録から cooldown ミリ秒たっていなければ入れずに false を返す。確かめと書き込みを 1 文で行う */
 export async function insertScore(
   db: Db,
-  values: { key: string; game: GameId; mode: string; score: number; playedAt: number; now: number },
-): Promise<void> {
-  await db
+  values: {
+    key: string;
+    game: GameId;
+    mode: string;
+    score: number;
+    playedAt: number;
+    now: number;
+    cooldown: number;
+  },
+): Promise<boolean> {
+  const { meta } = await db
     .prepare(
-      "INSERT INTO scores (game, mode, player_key, score, played_at, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+      `INSERT INTO scores (game, mode, player_key, score, played_at, created_at)
+       SELECT ?, ?, ?, ?, ?, ?
+       WHERE NOT EXISTS (
+         SELECT 1 FROM scores WHERE player_key = ? AND game = ? AND created_at > ?
+       )`,
     )
-    .bind(values.game, values.mode, values.key, values.score, values.playedAt, values.now)
+    .bind(
+      values.game,
+      values.mode,
+      values.key,
+      values.score,
+      values.playedAt,
+      values.now,
+      values.key,
+      values.game,
+      values.now - values.cooldown,
+    )
     .run();
+  return meta.changes > 0;
 }
 
 export async function playerBest(db: Db, key: string, game: GameId, mode: string): Promise<number> {

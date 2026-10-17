@@ -11,19 +11,22 @@ interface CallOptions {
   code?: string;
   body?: unknown;
   rawBody?: string;
+  ip?: string;
 }
 
 function setup() {
   let now = NOW;
   let allowWrites = true;
+  const blockedKeys = new Set<string>();
   const deps: ApiDeps = {
     db: createSqliteDb(),
-    limiter: { limit: async () => ({ success: allowWrites }) },
+    limiter: { limit: async ({ key }) => ({ success: allowWrites && !blockedKeys.has(key) }) },
     now: () => now,
   };
   const call = async (method: string, path: string, options: CallOptions = {}) => {
     const headers = new Headers();
     if (options.code) headers.set("authorization", `Bearer ${options.code}`);
+    if (options.ip) headers.set("cf-connecting-ip", options.ip);
     const body =
       options.rawBody ?? (options.body === undefined ? undefined : JSON.stringify(options.body));
     if (body !== undefined) headers.set("content-type", "application/json");
@@ -53,6 +56,10 @@ function setup() {
     blockWrites: () => {
       allowWrites = false;
     },
+    blockKey: (key: string) => {
+      blockedKeys.add(key);
+    },
+    deps,
   };
 }
 
@@ -148,6 +155,35 @@ describe("POST /api/scores", () => {
   it("AC-W8 refuses writes over the rate limit", async () => {
     app.blockWrites();
     expect((await app.submit(generateCode(), 5)).status).toBe(429);
+  });
+
+  it("AC-W8 limits writes by client address so fresh codes do not escape the limit", async () => {
+    app.blockKey("ip:203.0.113.7");
+    const body = { game: "memory", mode: "normal", score: 5 };
+    const blocked = await app.call("POST", "/api/scores", {
+      code: generateCode(),
+      body,
+      ip: "203.0.113.7",
+    });
+    expect(blocked.status).toBe(429);
+    const other = await app.call("POST", "/api/scores", {
+      code: generateCode(),
+      body,
+      ip: "203.0.113.8",
+    });
+    expect(other.status).toBe(200);
+  });
+
+  it("AC-W8 keeps the cooldown when two scores race", async () => {
+    const code = generateCode();
+    const body = { game: "memory", mode: "normal", score: 5 };
+    const responses = await Promise.all([
+      app.call("POST", "/api/scores", { code, body }),
+      app.call("POST", "/api/scores", { code, body }),
+    ]);
+    expect(responses.map((r) => r.status).sort()).toEqual([200, 429]);
+    const me = await app.call("GET", "/api/me", { code });
+    expect(me.json.bests).toEqual([{ game: "memory", mode: "normal", best: 5, plays: 1 }]);
   });
 });
 

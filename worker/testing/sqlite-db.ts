@@ -21,8 +21,9 @@ class Statement implements DbStatement {
     return { results: this.database.prepare(this.sql).all(...this.values) as T[] };
   }
 
-  async run(): Promise<unknown> {
-    return this.database.prepare(this.sql).run(...this.values);
+  async run(): Promise<{ meta: { changes: number } }> {
+    const { changes } = this.database.prepare(this.sql).run(...this.values);
+    return { meta: { changes: Number(changes) } };
   }
 }
 
