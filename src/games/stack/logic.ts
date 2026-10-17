@@ -1,4 +1,4 @@
-/** 盤の幅を 1 とした座標。x は板の左端 */
+/** 盤の幅を 1 とした座標。x はブロックの左端 */
 export interface Block {
   x: number;
   width: number;
@@ -20,7 +20,7 @@ export interface StackState {
   /** 1 秒に動く盤の幅 */
   speed: number;
   perfects: number;
-  /** 直前に切り落とされた部分（終わったときは落とした板そのもの） */
+  /** 直前に切り落とされた部分（終わったときは落としたブロックそのもの） */
   cut: Block | null;
   over: boolean;
 }
@@ -52,7 +52,7 @@ export function score(state: StackState): number {
   return state.blocks.length - 1;
 }
 
-/** 板を dt ミリ秒ぶん動かす。端では折り返す */
+/** ブロックを dt ミリ秒ぶん動かす。端では折り返す */
 export function advance(state: StackState, dt: number): StackState {
   if (state.over) return state;
   const range = 1 - state.moving.width;
@@ -71,7 +71,7 @@ export function advance(state: StackState, dt: number): StackState {
   return { ...state, moving: { ...state.moving, x }, direction };
 }
 
-/** 板を落とす。重なった部分だけ残し、重ならなければ終わる */
+/** ブロックを落とす。重なった部分だけ残し、重ならなければ終わる */
 export function drop(state: StackState): StackState {
   if (state.over) return state;
   const top = state.blocks.at(-1);

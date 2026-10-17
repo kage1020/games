@@ -21,7 +21,7 @@ function isAdjacent(board: ZipBoard, a: number, b: number): boolean {
   return neighbors4(a, board.size, board.size).includes(b);
 }
 
-/** 盤の解（生成に使った道）を最後までたどる */
+/** 盤の解（生成に使った経路）を最後までたどる */
 function solve(state: ZipState): ZipState {
   let current = state;
   for (const cell of current.board.solution.slice(current.path.length)) {
@@ -30,7 +30,7 @@ function solve(state: ZipState): ZipState {
   return current;
 }
 
-/** 番号のない 2 つの隣り合うマスを道として持つ、手で作った 3×3 の盤 */
+/** 番号のない 2 つの隣り合うマスを線として持つ、手で作った 3×3 の盤 */
 const MANUAL: ZipBoard = {
   size: 3,
   // 0 1 2

@@ -8,10 +8,10 @@
 | --- | --- |
 | `src/` | React の SPA。一覧・ゲーム・記録と設定の 3 画面 |
 | `src/design-system/` | デザインシステムの取り込み。`vendor/` は配布物そのまま（`tokens.json`・`bundle.css`）、`tokens.css` は `tokens.json` から生成、`components/` は `bundle.js` を TSX に移した部品（クラス名は `kg-` のまま） |
-| `src/sdk/` | ゲームとプラットフォームの約束（型・ループ・入力・乱数・音） |
+| `src/sdk/` | ゲームとプラットフォームの間のインターフェース（型・ループ・入力・乱数・音） |
 | `src/games/<id>/` | 1 ゲーム = 1 フォルダ。`logic.ts`（純粋な規則）・`Game.tsx`（描画と入力）・`Thumb.tsx`（一覧のサムネイル）・`index.ts`（定義） |
 | `src/platform/` | 記録（端末）・設定・引き継ぎコード・ランキング通信・音 |
-| `shared/` | ブラウザと Worker の両方が使う規則（ゲーム目録・コード・名前・期間・API の型） |
+| `shared/` | ブラウザと Worker の両方が使う規則（ゲームのカタログ・コード・名前・期間・API の型） |
 | `worker/` | Cloudflare Worker。`/api/*` だけを受け持つ |
 | `migrations/` | D1 のスキーマ |
 
@@ -20,13 +20,13 @@
 ## デザインシステムの取り込み
 
 - `tokens.css` は配布されないため、`format.md` の「tokens.css as compiled」の形で `tokens.json` から生成する（`pnpm tokens`）。
-  - `:root, [data-theme="light"]` に色と影、`[data-theme="dark"]` に上書きとエイリアスの再宣言、`:root` に余白・角丸・大きさ・縦横比・重なり・`--font-<key>`、型スタイルごとに `.<name>` クラス。
+  - `:root, [data-theme="light"]` に色と影、`[data-theme="dark"]` に上書きとエイリアスの再宣言、`:root` に余白・角丸・サイズ・縦横比・z-index・`--font-<key>`、テキストスタイルごとに `.<name>` クラス。
 - `bundle.css` は手を入れずに `vendor/kage.css` として読み込む。アプリ固有の配置（ペインの幅、Stage の収め方）だけをアプリ側 CSS に書く。新しい色・角丸・影・フォントは足さない。
 - 部品は `bundle.js` の振る舞いと `index.d.ts` の props を正とし、TSX に移す。リンクを描く部品はルーターに依存せず、`LinkProvider` から渡されたリンク部品で描く。
 - `bundle.js` から振る舞いを変えたところ（デザインシステムに戻すときの候補）：
   - `Stage`：一時停止中の Esc で再開する（「Esc で続ける」の表示どおりにする）。
   - `Segmented`：中身をネイティブの radio にした。選択中の見た目は `bundle.css` の `aria-checked` と同じ指定をアプリ側 CSS に置く。
-  - `Result`：`p` に `aria-label` は付けられないため、数え上げの文字は読み上げから外し、最終の数を見えない文字で渡す。
+  - `Result`：`p` に `aria-label` は付けられないため、数え上げの途中の数はスクリーンリーダーから隠し、最終の数を視覚的に隠したテキストで渡す。
   - `Gallery`：`div[role=list]` を `ul` / `li` にした。
   - `AppBar`：画面に別の `h1` があるときのために、タイトルを `div` にもできる（`titleAs`）。
 - アイコンは lucide（`lucide-react`）。16px、ツールバーと AppBar は 20px、`currentColor`。
@@ -54,16 +54,16 @@
 ### 見つからない
 - `EmptyState`「そのページは見つからない。」と一覧へのリンク。
 
-## ゲームの約束（SDK）
+## ゲーム SDK
 
 ```ts
 interface GameProps {
-  mode: string;            // 目録のモード id
+  mode: string;            // カタログのモード id
   paused: boolean;         // true の間は時間を進めず、入力も受けない
-  seed: number;            // 乱数の種。もう一度のたびに変わる
+  seed: number;            // 乱数のシード。「もう一度」のたびに変わる
   sound: Sound;            // play("tap" | "good" | "bad" | "clear" | "over")
   reducedMotion: boolean;
-  onHud(items: HudItem[]): void;       // Stage の帯に出す数（表示が変わるときだけ呼ぶ）
+  onHud(items: HudItem[]): void;       // Stage の HUD に出す数値（表示が変わるときだけ呼ぶ）
   onFinish(result: GameResult): void;  // { score: number | null, stats?: HudItem[], note?: string }
 }
 ```
@@ -76,7 +76,7 @@ interface GameProps {
 
 - 記録はまず端末（localStorage）に残す。ランキングへの送信が失敗したら送信待ちに積み、起動時・通信の復帰時・次の終了時に送り直す。
 - ランキングは D1。プレイヤーは引き継ぎコード（160bit、Crockford base32 で 32 字）で識別し、サーバーはその SHA-256 だけを持つ。登録の手続きはない。
-- 期間は日本時間で区切る（今日 = 0 時から、今週 = 月曜 0 時から、すべて）。プレイヤーごとの最良の記録で順位を付け、同じ記録は同じ順位。
+- 期間は日本時間で区切る（今日 = 0 時から、今週 = 月曜 0 時から、すべて）。プレイヤーごとのベスト記録で順位を付け、同じ記録は同じ順位。
 
 ### API
 
@@ -114,19 +114,19 @@ interface GameProps {
 - AC-T2 最初のテーマの色は `:root, [data-theme="light"]` の中に `--<name>: <value>;` で出る。
 - AC-T3 後のテーマは `[data-theme="dark"]` に、値が異なる色と、すべてのエイリアスを再宣言する。
 - AC-T4 エイリアス `{accent}` は `var(--accent)` になる。
-- AC-T5 色以外の家族（spacing・radius・size・shadow・aspect・zIndex）は `:root` に `--<name>` で出る。shadow は色と同じブロックに出る。
+- AC-T5 色以外のトークン（spacing・radius・size・shadow・aspect・zIndex）は `:root` に `--<name>` で出る。shadow は色と同じブロックに出る。
 - AC-T6 `type.families` は `--font-<key>` で `:root` に出る。
-- AC-T7 型スタイルごとに `.<name> { font-family; font-size; line-height; font-weight; letter-spacing? }` が出る。family はグループの family の変数。数値の `fontWeight` はそのまま、単位のない `lineHeight` はそのまま。
+- AC-T7 テキストスタイルごとに `.<name> { font-family; font-size; line-height; font-weight; letter-spacing? }` が出る。family はグループの family の変数。数値の `fontWeight` はそのまま、単位のない `lineHeight` はそのまま。
 - AC-T8 リポジトリの `tokens.css` は `vendor/tokens.json` から生成した結果と一致する。
 
 ## AC-I 共有用の画像（`scripts/lib/og.ts`）
 - AC-I1 画像はサイト名（`games` を `ui-strong` 相当、`.kage1020.com` を等幅・`ink-muted`）と一文だけを描く。ゲームの数やサムネイルは描かない（ゲームを足しても作り直さなくてよい）。
-- AC-I2 絵にする前に `var(--<色>)` をライトテーマの色に、`var(--font-<key>)` をフォントの並びに置き換え、`font:` の一括指定を `font-weight`・`font-size`・`font-family` に開く（resvg は CSS 変数と一括指定を読まない）。
+- AC-I2 PNG にする前に `var(--<色>)` をライトテーマの色に、`var(--font-<key>)` をフォントスタックに置き換え、`font:` ショートハンドを `font-weight`・`font-size`・`font-family` に展開する（resvg は CSS 変数と font ショートハンドを読まない）。
 
 ## AC-S 共有の規則（`shared/`）
-### 目録 `catalog.ts`
-- AC-S1 8 つのゲーム id がある。各ゲームは 1 つ以上のモード、記録の向き（`asc` / `desc`）、記録の下限と上限を持つ。
-- AC-S2 `isValidScore(game, mode, score)` は、目録にないゲーム・モード、整数でない値、下限未満・上限超えを拒む。
+### カタログ `catalog.ts`
+- AC-S1 8 つのゲーム id がある。各ゲームは 1 つ以上のモード、記録の並び順（`asc` は小さいほど、`desc` は大きいほどよい）、記録の下限と上限を持つ。
+- AC-S2 `isValidScore(game, mode, score)` は、カタログにないゲーム・モード、整数でない値、下限未満・上限超えを拒む。
 - AC-S3 `isBetter(order, a, b)` は `desc` なら a > b、`asc` なら a < b。
 ### 引き継ぎコード `code.ts`
 - AC-S4 `generateCode()` は Crockford base32（`0-9A-Z` から `I L O U` を除く）の 32 字。
@@ -143,13 +143,13 @@ interface GameProps {
 ## AC-W Worker API（`worker/`）
 - AC-W1 `POST /api/scores` は認証がなければ 401、不正なゲーム・モード・記録は 400。
 - AC-W2 初めてのコードで記録すると、プレイヤーが作られる。名前の指定がなければ `guest-` ＋ 4 字。
-- AC-W3 記録すると、自分の最良（`best`）と、今日・今週・すべての順位と人数を返す。
-- AC-W4 順位はプレイヤーごとの最良で付け、同じ値は同じ順位（1, 2, 2, 4）。`asc` のゲームは小さいほど上。
+- AC-W3 記録すると、自分のベスト（`best`）と、今日・今週・すべての順位と人数を返す。
+- AC-W4 順位はプレイヤーごとのベストで付け、同じ値は同じ順位（1, 2, 2, 4）。`asc` のゲームは小さいほど上。
 - AC-W5 `GET /api/rankings` は上位 `limit`（既定 10、最大 50）件を返す。認証があり、自分が上位にいれば行に `me: true`、いなければ `me` に自分の行を返す。記録がなければ `me` は `null`。
 - AC-W6 期間の外の記録は数えない。
 - AC-W7 `at` は受け取るが、未来や 7 日より前はサーバーの時刻に置き換える。
-- AC-W8 同じプレイヤーが同じゲームに 2 秒以内に続けて送ると 429（同時に送っても 1 件だけ入る）。レート制限を超えても 429。レート制限はプレイヤーと送り元のアドレスの両方で数える（コードは手元で作り直せるため）。
-- AC-W9 `GET /api/me` は名前と、ゲーム・モードごとの最良と回数を返す。未知のコードは 404。
+- AC-W8 同じプレイヤーが同じゲームに 2 秒以内に続けて送ると 429（同時に送っても 1 件だけ入る）。レート制限を超えても 429。レート制限はプレイヤーと送信元 IP の両方で数える（コードはクライアントでいくらでも作れるため）。
+- AC-W9 `GET /api/me` は名前と、ゲーム・モードごとのベストと回数を返す。未知のコードは 404。
 - AC-W10 `PUT /api/me` は名前を正規化して保存する。`name: null` は既定の名前（`guest-` ＋ 4 字）に戻す（名前を消して guest に戻す手段が要るため）。正規化して空になる文字列は 400。
 - AC-W11 `/api/` の下の知らないパスは 404、知らないメソッドは 405。応答はすべて JSON。
 
@@ -179,7 +179,7 @@ interface GameProps {
 - AC-U1 `Button` に `disabled` を渡しても、押せるままである。`loading` は `aria-busy` を付け、クリックを止めない。
 - AC-U2 `Stage` は `onPause` があれば Esc で一時停止し、一時停止中の Esc で再開する。一時停止中は `bg` で覆い「続ける」にフォーカスを置く。
 - AC-U3 プレイ中にタブを離れると（`visibilitychange` で hidden）一時停止する。時間の流れないゲームは止めない。
-- AC-U4 `Result` は動きを減らす設定では、最初から最終の数を出す。読み上げには数え上げの途中を出さず、最終の数だけを渡す（`p` に `aria-label` は付けられないため、見えない文字で渡す）。
+- AC-U4 `Result` はモーションを減らす設定では、最初から最終の数を出す。スクリーンリーダーには数え上げの途中を出さず、最終の数だけを渡す（`p` に `aria-label` は付けられないため、視覚的に隠したテキストで渡す）。
 - AC-U5 一覧は 8 つのカードを出し、種類の `Segmented` で絞り込める。絞り込みの数は `figure` に反映する。
 - AC-U6 お気に入りにしたゲームは一覧の先頭に並ぶ。
 - AC-U7 結果の画面では「もう一度」にフォーカスがあり、Enter で始め直せる。
@@ -202,7 +202,7 @@ interface GameProps {
 
 ## AC-G ゲームの規則（各 `src/games/<id>/logic.ts`）
 
-共通：乱数は種から決まる（同じ種なら同じ盤面）。時間を扱う関数は経過ミリ秒を引数で受ける。
+共通：乱数はシードから決まる（同じシードなら同じ盤面）。時間を扱う関数は経過ミリ秒を引数で受ける。
 
 ### 数字記憶 `memory`
 - AC-G-memory-1 盤は 8×5。レベル n では 1〜n の数が別々のマスに置かれる。はじめは 4。
@@ -213,29 +213,29 @@ interface GameProps {
 - AC-G-memory-6 40 をクリアしたら終わる。記録は覚えた数の最大（何もクリアしなければ 0）。
 
 ### 点つなぎ `zip`
-- AC-G-zip-1 生成される盤は N×N で、1〜K の番号マスを持ち、1 から K まで番号順にすべてのマスを一度ずつ通る道が少なくとも 1 つある。
-- AC-G-zip-2 道は常に 1 のマスから始まる。隣り合う（上下左右）まだ通っていないマスにだけ伸ばせる。
+- AC-G-zip-1 生成される盤は N×N で、1〜K の番号マスを持ち、1 から K まで番号順にすべてのマスを一度ずつ通る経路が少なくとも 1 つある。
+- AC-G-zip-2 線は常に 1 のマスから始まる。隣り合う（上下左右）まだ通っていないマスにだけ伸ばせる。
 - AC-G-zip-3 番号マスには、次に来るべき番号のときだけ入れる。K のマスからは伸ばせない。
-- AC-G-zip-4 道の 1 つ前のマスに戻ると最後の 1 マスを取り消す。道の途中のマスを選ぶと、そこまで縮む。
+- AC-G-zip-4 線の 1 つ前のマスに戻ると最後の 1 マスを取り消す。線の途中のマスを選ぶと、そこまで縮む。
 - AC-G-zip-5 すべてのマスを通って K で終わったら、その面はクリア。
 - AC-G-zip-6 5 面（大きさ 4, 5, 5, 6, 6）を解いた合計の経過時間が記録。一時停止の間は数えない。
 
 ### 陣取り `territory`
 - AC-G-territory-1 盤は 16×16。プレイヤーは 2〜4 人（あなた＋ CPU）で、四隅の 2×2 を持って始まる。
-- AC-G-territory-2 1 歩ごとに全員が向きに沿って 1 マス進み、入ったマスを自分のものにする。盤の外へは進まない。
+- AC-G-territory-2 1 ステップごとに全員が向きに沿って 1 マス進み、入ったマスを自分のものにする。盤の外へは進まない。
 - AC-G-territory-3 自分のマスで囲んだ（盤の外から自分以外のマスを通ってたどれない）マスは自分のものになる。
 - AC-G-territory-4 CPU は盤の外に向かわず、来た方向へすぐには戻らない。
 - AC-G-territory-5 60 秒で終わる。記録は自分のマスの数。
 
 ### スネーク `snake`
-- AC-G-snake-1 盤は 20×20。長さ 3 で中央から右向きに始まる。餌は空いたマスに 1 つ。
-- AC-G-snake-2 1 歩ごとに頭の向きへ進む。真後ろへの向き替えは無視する。向き替えは 2 つまで先に積める。
-- AC-G-snake-3 餌を食べると 1 伸び、記録が 1 増え、餌が別の空きマスに出る。
+- AC-G-snake-1 盤は 20×20。長さ 3 で中央から右向きに始まる。エサは空いたマスに 1 つ。
+- AC-G-snake-2 1 ステップごとに頭の向きへ進む。真後ろへの方向転換は無視する。方向転換は 2 つまで先行入力できる。
+- AC-G-snake-3 エサを食べると 1 マス伸び、記録が 1 増え、エサが別の空きマスに出る。
 - AC-G-snake-4 壁か自分の体に当たると終わる（動いて空いた尾のマスには入れる）。
-- AC-G-snake-5 1 歩の間隔は長さとともに短くなり、下限がある。
+- AC-G-snake-5 1 マス進む間隔は長さとともに短くなり、下限がある。
 
 ### スタック `stack`
-- AC-G-stack-1 板は左右の端で折り返しながら動く。段が上がるほど速い。
+- AC-G-stack-1 ブロックは左右の端で折り返しながら動く。段が上がるほど速い。
 - AC-G-stack-2 落とすと、下の段と重なった部分だけが残る。重ならなければ終わる。
 - AC-G-stack-3 ずれが小さい（幅の 3% 以下）ときは「ぴったり」として下の段と同じ位置・幅に揃える。
 - AC-G-stack-4 記録は積んだ段の数（土台は数えない）。
@@ -256,9 +256,9 @@ interface GameProps {
 - AC-G-mines-6 地雷を開くと終わり（記録なし）。地雷以外を全部開くと終わり、最初に開いてからの経過時間が記録。
 
 ### ブロック崩し `breakout`
-- AC-G-breakout-1 壁は 8 列×5 段。球は壁・天井・板で跳ね返る。
-- AC-G-breakout-2 板のどこに当たったかで返る角度が変わる（端ほど斜め）。
-- AC-G-breakout-3 ブロックに当たるとそのブロックが消え、記録が 1 増え、球が跳ね返る。
-- AC-G-breakout-4 球が下に落ちると残りが 1 減る。3 つ落とすと終わる。
-- AC-G-breakout-5 壁をすべて崩すと、次の壁が出て球が少し速くなる。
-- AC-G-breakout-6 球は 1 歩で大きく動いてもブロックをすり抜けない。
+- AC-G-breakout-1 ブロックは 8 列×5 段。ボールは左右の壁・天井・パドルで跳ね返る。
+- AC-G-breakout-2 パドルのどこに当たったかで返る角度が変わる（端ほど斜め）。
+- AC-G-breakout-3 ブロックに当たるとそのブロックが消え、記録が 1 増え、ボールが跳ね返る。
+- AC-G-breakout-4 ボールが下に落ちると残りが 1 減る。3 回落とすと終わる。
+- AC-G-breakout-5 ブロックをすべて崩すと次の面に進み、ボールが少し速くなる。
+- AC-G-breakout-6 ボールは 1 フレームで大きく動いてもブロックをすり抜けない。

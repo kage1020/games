@@ -65,7 +65,7 @@ export function ContentCard({
   );
 }
 
-/** カードを並べる格子。初めて並ぶときは 40ms ずつ、6 個目まで順に現れる */
+/** カードを並べるグリッド。初めて並ぶときは 40ms ずつ、6 個目まで順に現れる */
 export function Gallery({
   children,
   min = 220,
@@ -124,7 +124,7 @@ export interface StageProps {
   onExit?: () => void;
   style?: CSSProperties;
   className?: string;
-  /** 中身の描画面。始めたときにフォーカスを移すために使う */
+  /** 中身の描画領域。始めたときにフォーカスを移すために使う */
   screenRef?: Ref<HTMLDivElement>;
 }
 
@@ -227,7 +227,7 @@ export function Stage({
   );
 }
 
-/** 数を 0 から目標まで数え上げる（ease-out）。動きを減らす設定では即座に目標値 */
+/** 数を 0 から目標まで数え上げる（ease-out）。モーションを減らす設定では即座に目標値 */
 function useCountUp(target: number | null, duration: number): number | null {
   const reduce = useReducedMotion();
   const [shown, setShown] = useState<number | null>(reduce || target === null ? target : 0);

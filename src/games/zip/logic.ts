@@ -9,7 +9,7 @@ export interface ZipBoard {
   size: number;
   /** マスごとの番号。null は番号のないマス */
   checkpoints: (number | null)[];
-  /** 生成に使った道。番号順にすべてのマスを通る */
+  /** 生成に使った経路。番号順にすべてのマスを通る */
   solution: number[];
 }
 
@@ -19,14 +19,14 @@ export interface ZipState {
   /** 0 から数えた面 */
   stage: number;
   board: ZipBoard;
-  /** 1 のマスから始まる、いまの道 */
+  /** 1 のマスから始まる、いま引いている線 */
   path: number[];
   /** 遊んでいた時間の合計（ミリ秒） */
   elapsed: number;
   phase: ZipPhase;
 }
 
-/** 蛇行する道から始め、端を付け替える（backbite）ことで偏りのないハミルトン路を作る */
+/** 蛇行する経路から始め、端点を付け替えて（backbite）偏りのないハミルトン路を作る */
 function hamiltonianPath(size: number, rng: Rng): number[] {
   let path: number[] = [];
   for (let y = 0; y < size; y++) {
@@ -83,7 +83,7 @@ function checkpointCount(board: ZipBoard): number {
   return board.checkpoints.reduce((max: number, n) => (n !== null && n > max ? n : max), 0);
 }
 
-/** 道が次に入るべき番号 */
+/** 線が次に通るべき番号 */
 export function nextCheckpoint(board: ZipBoard, path: number[]): number {
   return path.filter((cell) => board.checkpoints[cell] != null).length + 1;
 }
@@ -112,8 +112,8 @@ function withPath(state: ZipState, path: number[]): ZipState {
 }
 
 /**
- * 指やクリックで選んだマスへ道を動かす。1 つ前のマスなら最後を取り消し、
- * 道の途中のマスならそこまで縮め、隣の空いたマスなら伸ばす。
+ * タップやクリックで選んだマスへ線を動かす。1 つ前のマスなら最後を取り消し、
+ * 線の途中のマスならそこまで縮め、隣の空いたマスなら伸ばす。
  */
 export function moveTo(state: ZipState, cell: number): ZipState {
   if (state.phase !== "playing") return state;

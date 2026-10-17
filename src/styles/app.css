@@ -101,7 +101,7 @@ a {
   margin-top: var(--space-8);
 }
 
-/* ul にした格子の既定の余白だけ消す。配置は各画面のクラスで決める */
+/* ul にしたグリッドの既定の余白だけ消す。配置は各画面のクラスで決める */
 :where(ul.kg-gallery) {
   list-style: none;
   margin: 0;
@@ -152,7 +152,7 @@ a {
   inset: 0;
 }
 
-/* 描画面へのフォーカスはキー操作を届けるため。カーソルはゲームが描く */
+/* 描画領域へのフォーカスはキー操作を届けるため。カーソルはゲームが描く */
 .play-stage .kg-stage-screen:focus {
   outline: none;
 }
@@ -300,7 +300,7 @@ a {
   font-size: 13px;
 }
 
-/* ゲームの描画面。SDK の約束：SVG に game-svg を付ける */
+/* ゲームの描画領域。SDK の決まり：SVG に game-svg を付ける */
 .game-svg {
   display: block;
   width: 100%;
@@ -403,7 +403,7 @@ a {
   gap: var(--space-3);
 }
 
-/* ---------- 知らせ ---------- */
+/* ---------- 通知 ---------- */
 .notice-area {
   position: fixed;
   left: 50%;

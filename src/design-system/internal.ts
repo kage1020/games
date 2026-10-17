@@ -30,7 +30,7 @@ function subscribeReducedMotion(notify: () => void): () => void {
   return () => query?.removeEventListener("change", notify);
 }
 
-/** 動きを減らす設定。JS で動かすものはこれを見る */
+/** prefers-reduced-motion。JS で動かすアニメーションはこれを見る */
 export function useReducedMotion(): boolean {
   return useSyncExternalStore(
     subscribeReducedMotion,
@@ -43,7 +43,7 @@ export function aspectRatio(aspect: "wide" | "square" | "tall" | undefined): str
   return aspect === "square" ? "1 / 1" : aspect === "tall" ? "3 / 4" : "16 / 9";
 }
 
-/** 読み上げにだけ渡す文字 */
+/** スクリーンリーダーにだけ渡すテキスト */
 export const visuallyHidden: CSSProperties = {
   position: "absolute",
   width: 1,

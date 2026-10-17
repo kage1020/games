@@ -102,7 +102,7 @@ export default function TerritoryGame({ mode, paused, seed, sound, onHud, onFini
       elapsed.current -= STEP_MS;
       const before = countCells(next.owners, 0);
       next = step(next, rng);
-      // 1 歩で 2 マス以上増えたら、囲んで取った
+      // 1 ステップで 2 マス以上増えたら、囲んで取った
       if (countCells(next.owners, 0) - before > 1) sound.play("good");
       if (next.over) sound.play("over");
     }

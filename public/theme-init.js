@@ -1,4 +1,4 @@
-// 描画の前に <html data-theme> を決め、ちらつきを防ぐ。src/platform/settings.ts と同じ鍵と規則
+// 描画の前に <html data-theme> を決め、ちらつきを防ぐ。src/platform/settings.ts と同じキーと規則
 (() => {
   let preference = "system";
   try {

@@ -32,14 +32,14 @@ export interface Ball {
 export interface BreakoutState {
   /** 上の段から左から順。true は残っているブロック */
   bricks: boolean[];
-  /** 板の中心 */
+  /** パドルの中心 */
   paddle: number;
   ball: Ball;
-  /** 球が板の上で打ち出しを待っている */
+  /** ボールがパドルの上で打ち出しを待っている */
   attached: boolean;
   lives: number;
   score: number;
-  /** 何枚目の壁か */
+  /** 何面目か */
   wall: number;
   /** 1 秒に進む盤の幅 */
   speed: number;
@@ -118,7 +118,7 @@ function hitsPaddle(ball: Ball, paddle: number): boolean {
   );
 }
 
-/** 球とブロックが触れていれば、跳ね返した球を返す */
+/** ボールとブロックが触れていれば、跳ね返したボールを返す */
 function bounceOffBrick(ball: Ball, brick: Rect): Ball | null {
   const nearX = Math.min(Math.max(ball.x, brick.x), brick.x + brick.width);
   const nearY = Math.min(Math.max(ball.y, brick.y), brick.y + brick.height);
@@ -144,8 +144,8 @@ function bounceOffBrick(ball: Ball, brick: Rect): Ball | null {
 }
 
 /**
- * dt ミリ秒ぶん進める。steer（-1〜1）で板を動かす。
- * 球は半径の半分より小さい歩幅に刻んで動かし、ブロックをすり抜けない。
+ * dt ミリ秒ぶん進める。steer（-1〜1）でパドルを動かす。
+ * ボールは半径の半分より小さい刻みで動かし、ブロックをすり抜けない。
  */
 export function advance(state: BreakoutState, dt: number, steer = 0): BreakoutState {
   if (state.over) return state;

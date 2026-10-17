@@ -16,7 +16,7 @@ function emit() {
   for (const listener of listeners) listener();
 }
 
-/** 画面下端に 1 つだけ出す。自動では消さず、次の知らせか × で入れ替わる */
+/** 画面下端に 1 つだけ出す。自動では消さず、次の通知か × で入れ替わる */
 export function showNotice(
   notice: Omit<NoticeMessage, "id" | "tone"> & { tone?: "neutral" | "danger" },
 ) {

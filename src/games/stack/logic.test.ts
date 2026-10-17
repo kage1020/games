@@ -10,7 +10,7 @@ import {
   speedFor,
 } from "./logic.ts";
 
-/** 動く板を x の位置に置いた状態 */
+/** 動くブロックを x の位置に置いた状態 */
 function at(state: StackState, x: number): StackState {
   return { ...state, moving: { ...state.moving, x } };
 }

@@ -1,7 +1,7 @@
 import { type RefObject, useEffect, useEffectEvent } from "react";
 import type { Direction } from "./grid.ts";
 
-/** 重いフレームでも時間は数えるが、ありえない飛び（復帰直後など）は 1 歩に抑える */
+/** 重いフレームでも経過時間は数えるが、スリープ復帰直後のような大きな飛びは上限で抑える */
 const MAX_STEP = 250;
 
 /** requestAnimationFrame で step(経過ミリ秒) を呼ぶ。running が false の間は止まる */
@@ -60,7 +60,7 @@ export function useGameKeys(
 
 const SWIPE_DISTANCE = 24;
 
-/** 指やマウスで払った向き。払う面には CSS で touch-action: none を付ける */
+/** スワイプの向き。スワイプを受ける要素には CSS で touch-action: none を付ける */
 export function useSwipe(
   ref: RefObject<HTMLElement | SVGElement | null>,
   onSwipe: (direction: Direction) => void,
@@ -82,7 +82,7 @@ export function useSwipe(
       const dy = e.clientY - start.y;
       if (Math.max(Math.abs(dx), Math.abs(dy)) < SWIPE_DISTANCE) return;
       handle(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : dy > 0 ? "down" : "up");
-      // 払い続けたら次の向きを取れるように、ここを新しい起点にする
+      // スワイプし続けたら次の向きを取れるように、ここを新しい起点にする
       start = { x: e.clientX, y: e.clientY, id: e.pointerId };
     };
     const up = () => {

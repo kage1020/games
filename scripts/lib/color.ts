@@ -14,7 +14,7 @@ function channel(value: number): string {
     .padStart(2, "0");
 }
 
-/** トークンの色（hex か oklch）を、SVG を絵にする道具でも読める hex にする */
+/** トークンの色（hex か oklch）を、resvg でも読める hex にする */
 export function toHex(value: string): string {
   if (value.startsWith("#")) return value.toLowerCase();
   const match = OKLCH.exec(value);

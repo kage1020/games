@@ -47,8 +47,8 @@ function fakeGame(overrides: Partial<GameDefinition>): GameDefinition {
   return {
     id: "snake",
     title: "スネーク",
-    summary: "伸びながら餌を集める",
-    description: "餌を食べると伸びる。",
+    summary: "伸びながらエサを集める",
+    description: "エサを食べると伸びる。",
     genre: "アクション",
     players: "1人",
     duration: "3分",

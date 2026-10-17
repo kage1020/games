@@ -15,7 +15,7 @@ export interface Settings {
   name: string | null;
 }
 
-/** public/theme-init.js も同じ鍵を読む */
+/** public/theme-init.js も同じキーを読む */
 export const SETTINGS_KEY = "kg-games:settings:v1";
 
 export const DEFAULT_SETTINGS: Settings = {

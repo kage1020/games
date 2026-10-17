@@ -6,7 +6,7 @@ async function sha256Hex(text: string): Promise<string> {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-/** Authorization ヘッダーのコードからプレイヤーの鍵を作る。ヘッダーがなければ null */
+/** Authorization ヘッダーのコードからプレイヤーキーを作る。ヘッダーがなければ null */
 export async function playerKey(request: Request): Promise<string | null> {
   const header = request.headers.get("authorization");
   if (header === null) return null;

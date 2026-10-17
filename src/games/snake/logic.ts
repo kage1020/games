@@ -19,7 +19,7 @@ export interface SnakeState {
   /** 頭が先頭 */
   body: Point[];
   direction: Direction;
-  /** 先に積んだ向き替え */
+  /** 先行入力した方向転換 */
   queue: Direction[];
   food: Point | null;
   eaten: number;
@@ -50,12 +50,12 @@ export function createSnake(rng: Rng): SnakeState {
   };
 }
 
-/** 1 歩の間隔。長くなるほど短く、下限がある */
+/** 1 マス進む間隔。長くなるほど短く、下限がある */
 export function interval(length: number): number {
   return Math.max(MIN_INTERVAL, START_INTERVAL - (length - START_LENGTH) * SPEED_UP);
 }
 
-/** 向き替えを積む。真後ろと同じ向きは無視する */
+/** 方向転換を先行入力として積む。真後ろへの方向転換は無視する */
 export function turn(state: SnakeState, direction: Direction): SnakeState {
   if (state.outcome !== "playing" || state.queue.length >= MAX_QUEUE) return state;
   const last = state.queue.at(-1) ?? state.direction;
@@ -74,7 +74,7 @@ export function step(state: SnakeState, rng: Rng): SnakeState {
     return { ...state, direction, queue, outcome: "crashed" };
   }
   const eating = state.food !== null && key(state.food) === key(next);
-  // 食べない歩では尾が同時に空くので、尾のマスには入れる
+  // エサを食べないステップでは尾が同時に空くので、尾のマスには入れる
   const blocking = eating ? state.body : state.body.slice(0, -1);
   if (blocking.some((part) => key(part) === key(next))) {
     return { ...state, direction, queue, outcome: "crashed" };

@@ -10,7 +10,7 @@ export interface Rng {
   shuffle<T>(items: readonly T[]): T[];
 }
 
-/** 種から決まる乱数（mulberry32） */
+/** シードから決まる乱数（mulberry32） */
 export function createRng(seed: number): Rng {
   let state = seed >>> 0;
   const next = () => {

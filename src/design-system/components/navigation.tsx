@@ -56,7 +56,7 @@ export interface SegmentedProps {
   value?: string;
   defaultValue?: string;
   onChange?: (value: string) => void;
-  /** 読み上げ用の問い */
+  /** スクリーンリーダー向けの問い */
   label?: string;
   className?: string;
 }

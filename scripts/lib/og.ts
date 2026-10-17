@@ -24,7 +24,7 @@ export function ogSvg({ label, domain, tagline }: OgSite): string {
 </svg>`;
 }
 
-/** resvg は CSS 変数と font の一括指定を読まないので、値と個別の指定に開く */
+/** resvg は CSS 変数と font ショートハンドを読まないので、値と個別のプロパティに展開する */
 export function resolveSvgVars(svg: string, { colors, fonts }: SvgVars): string {
   return svg
     .replace(/var\(--font-(sans|mono)\)/g, (_, key: "sans" | "mono") => fonts[key])

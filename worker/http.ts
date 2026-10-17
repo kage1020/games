@@ -33,7 +33,7 @@ export async function readJson(request: Request): Promise<Record<string, unknown
       return body as Record<string, unknown>;
     }
   } catch {
-    // 本文が JSON でなければ下の 400 にまとめる
+    // ボディが JSON でなければ下の 400 にまとめる
   }
   throw new ApiError("invalid_request");
 }

@@ -23,7 +23,7 @@ interface Board {
 const aggregate = (order: ScoreOrder) => (order === "desc" ? "MAX" : "MIN");
 const direction = (order: ScoreOrder) => (order === "desc" ? "DESC" : "ASC");
 
-/** プレイヤーごとの最良と順位。order は目録の定数からしか来ない */
+/** プレイヤーごとのベストと順位。order はカタログの定数からしか来ない */
 function rankedCte(order: ScoreOrder): string {
   return `WITH bests AS (
       SELECT player_key, ${aggregate(order)}(score) AS best
@@ -78,7 +78,7 @@ export async function resetPlayerName(db: Db, key: string, now: number): Promise
   return name;
 }
 
-/** 同じゲームの直前の記録から cooldown ミリ秒たっていなければ入れずに false を返す。確かめと書き込みを 1 文で行う */
+/** 同じゲームの直前の記録から cooldown ミリ秒たっていなければ入れずに false を返す。確認と挿入を 1 つの SQL 文で行う */
 export async function insertScore(
   db: Db,
   values: {

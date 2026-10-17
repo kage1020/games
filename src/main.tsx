@@ -9,7 +9,7 @@ import "./styles/app.css";
 
 const RELOADED_AT = "kg-games:preload-reload";
 
-// 公開し直すと古い版の部品は消える。開いたままのタブで読み込めなかったら、一度だけ新しい版を読み込む
+// デプロイし直すと古いバージョンのチャンクは消える。開いたままのタブでチャンクを読み込めなかったら、一度だけページを読み込み直す
 window.addEventListener("vite:preloadError", (event) => {
   try {
     const last = Number(sessionStorage.getItem(RELOADED_AT) ?? 0);

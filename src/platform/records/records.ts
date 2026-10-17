@@ -134,6 +134,6 @@ export function saveRecords(storage: KeyValueStorage, records: Records): void {
   try {
     storage.setItem(RECORDS_KEY, JSON.stringify(records));
   } catch {
-    // 保存できない環境（プライベートブラウズなど）では、この画面の間だけ覚えておく
+    // 保存できない環境（プライベートブラウズなど）では、ページを開いている間だけメモリに持つ
   }
 }

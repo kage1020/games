@@ -24,8 +24,8 @@ function writeStorage(key: string, value: string): boolean {
 }
 
 /**
- * localStorage に置く値。読むたびに保存先と照らし、変わっていなければ同じ参照を返す。
- * 保存できない環境では、この画面を開いている間だけ覚えておく。
+ * localStorage に置く値。読むたびに localStorage の値と比べ、変わっていなければ同じ参照を返す。
+ * 保存できない環境では、ページを開いている間だけメモリに持つ。
  */
 export function createPersistentStore<T>(key: string, parse: (raw: string | null) => T): Store<T> {
   let cache: { raw: string | null; value: T } | null = null;

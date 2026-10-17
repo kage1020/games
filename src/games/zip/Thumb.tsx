@@ -2,7 +2,7 @@ const SIZE = 5;
 const CELL = 16;
 const LEFT = (160 - CELL * SIZE) / 2;
 const TOP = (90 - CELL * SIZE) / 2;
-/** 盤の途中まで引いた道 */
+/** 盤の途中まで引いた線 */
 const PATH = [0, 1, 6, 5, 10, 11, 12, 7, 2, 3, 4, 9, 14];
 const CHECKPOINTS: { cell: number; number: number }[] = [
   { cell: 0, number: 1 },

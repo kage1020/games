@@ -24,11 +24,11 @@ export interface GameProps {
   mode: string;
   /** true の間は時間を進めず、入力も受けない */
   paused: boolean;
-  /** 乱数の種。もう一度のたびに変わる */
+  /** 乱数のシード。「もう一度」のたびに変わる */
   seed: number;
   sound: Sound;
   reducedMotion: boolean;
-  /** Stage の帯に出す数。表示が変わるときだけ呼ぶ */
+  /** Stage の HUD に出す数値。表示が変わるときだけ呼ぶ */
   onHud(items: HudItem[]): void;
   onFinish(result: GameResult): void;
 }
@@ -57,7 +57,7 @@ export interface GameDefinition {
   players: string;
   duration: string;
   aspect: Aspect;
-  /** 時間の流れるゲーム。Esc とタブ離れで一時停止する */
+  /** 時間の流れるゲーム。Esc とタブの切り替えで一時停止する */
   timed: boolean;
   modes: GameMode[];
   modeLabel?: string;

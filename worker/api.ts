@@ -29,7 +29,7 @@ const MAX_LIMIT = 50;
 
 type Handler = (request: Request, deps: ApiDeps) => Promise<Response>;
 
-/** プレイヤーの鍵は手元で作り直せるので、送り元のアドレスでも数える */
+/** プレイヤーキーはクライアントでいくらでも作れるので、送信元 IP でも数える */
 async function checkLimit(deps: ApiDeps, request: Request, key: string): Promise<void> {
   const address = request.headers.get("cf-connecting-ip") ?? "unknown";
   const results = await Promise.all([

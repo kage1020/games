@@ -14,7 +14,7 @@ import {
   ROWS,
 } from "./logic.ts";
 
-/** 打ち出した後の球を好きな位置と速度に置く */
+/** 打ち出した後のボールを好きな位置と速度に置く */
 function flying(ball: BreakoutState["ball"], patch: Partial<BreakoutState> = {}): BreakoutState {
   return { ...createBreakout(), attached: false, ball, ...patch };
 }

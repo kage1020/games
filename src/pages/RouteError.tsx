@@ -1,7 +1,7 @@
 import { pageTitle } from "@/app/site.ts";
 import { Button, Notice } from "@/design-system/index.ts";
 
-/** 画面を描けなかったとき（新しい版が出て古い部品がなくなった、通信が切れたなど）。帯は残す */
+/** 画面を描けなかったとき（新しいバージョンが出て古いチャンクが消えた、通信が切れたなど）。帯は残す */
 export function RouteError() {
   return (
     <main className="page narrow route-error">

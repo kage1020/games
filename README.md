@@ -4,11 +4,11 @@
 
 ## 構成
 
-- `src/` — React の SPA（一覧・ゲーム・記録と設定）
-- `src/games/<id>/` — 1 ゲーム 1 フォルダ。`logic.ts` が規則、`Game.tsx` が描画と入力
-- `worker/` — `/api/*` を受け持つ Cloudflare Worker（ランキング）
-- `migrations/` — D1 のスキーマ
-- `shared/` — ブラウザと Worker で共有する規則
+- `src/`：React の SPA（一覧・ゲーム・記録と設定）
+- `src/games/<id>/`：1 ゲーム 1 フォルダ。`logic.ts` が規則、`Game.tsx` が描画と入力
+- `worker/`：`/api/*` を受け持つ Cloudflare Worker（ランキング）
+- `migrations/`：D1 のスキーマ
+- `shared/`：ブラウザと Worker で共有する規則
 
 ## 開発
 
@@ -38,12 +38,12 @@ Cloudflare まわりは `cf`（Cloudflare CLI）で扱い、設定は `cloudflar
 ## ゲームを足すとき
 
 1. `docs/design.md` の表と AC に足す。
-2. `shared/catalog.ts` にモード・記録の向き・上下限を足す（Worker が受け付ける範囲になる）。
+2. `shared/catalog.ts` にモード・記録の並び順（`asc` / `desc`）・上下限を足す（Worker が受け付ける範囲になる）。
 3. `src/games/<id>/` に `logic.test.ts` → `logic.ts` → `Game.tsx`・`Thumb.tsx`・`index.ts` の順に作り、`src/games/registry.ts` に並べる。
 
 ## 公開
 
-`cloudflare.config.ts` は `games.kage1020.com` をカスタムドメインとして持ち、D1 データベース `games` を使う。`cf auth login` でサインインしてから流す。
+`cloudflare.config.ts` は `games.kage1020.com` をカスタムドメインとして持ち、D1 データベース `games` を使う。`cf auth login` でサインインしてから実行する。
 
 ```sh
 pnpm db:migrate:remote   # 本番の D1 にスキーマを入れる

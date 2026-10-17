@@ -5,7 +5,7 @@ import { resolveThemeColors } from "./lib/color.ts";
 import { OG_WIDTH, ogSvg, resolveSvgVars } from "./lib/og.ts";
 import type { Tokens } from "./lib/tokens-to-css.ts";
 
-// 絵にする道具はシステムのフォントを名前で探すので、トークンの並びのうち手元にあるものを先に書く
+// resvg はシステムフォントを名前で探すので、トークンのフォントスタックのうちこの環境にあるものを先に書く
 const FONTS = {
   sans: "'Yu Gothic UI', 'Hiragino Sans', 'Noto Sans JP', Meiryo, sans-serif",
   mono: "Consolas, Menlo, 'DejaVu Sans Mono', monospace",

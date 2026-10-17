@@ -9,7 +9,7 @@ const ROW = 26;
 const GAP = 2;
 /** 地面から下に空ける高さ */
 const GROUND = ROW * 1.5;
-/** 動く板を下から何段目より上に出さないか。これを越えたら画面ごと上げる */
+/** 動くブロックを下から何段目より上に出さないか。これを越えたら画面ごと上げる */
 const VIEW_ROWS = 10;
 const FALL_TIME = 700;
 const GRAVITY = 0.0012;
