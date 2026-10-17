@@ -1,8 +1,12 @@
 import { act, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import TerritoryGame from "./Game.tsx";
 
 describe("TerritoryGame", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("shows every player in the legend and reports the HUD", () => {
     const onHud = vi.fn();
     render(
@@ -25,7 +29,8 @@ describe("TerritoryGame", () => {
     ]);
   });
 
-  it("finishes once after 60 seconds of play", async () => {
+  // 70 秒ぶんのフレームを jsdom で描くので、既定の 5 秒では足りないことがある
+  it("finishes once after 60 seconds of play", { timeout: 20_000 }, async () => {
     vi.useFakeTimers({
       toFake: [
         "requestAnimationFrame",
@@ -54,6 +59,5 @@ describe("TerritoryGame", () => {
     }
     expect(onFinish).toHaveBeenCalledTimes(1);
     expect(onFinish.mock.calls[0]?.[0]).toMatchObject({ score: expect.any(Number) });
-    vi.useRealTimers();
   });
 });
