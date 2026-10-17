@@ -7,7 +7,7 @@ const TOP = (90 - CELL * ROWS) / 2;
 /** 行ごとの見え方。. は開いた 0、数字は開いた数、# は閉じたマス、F は旗 */
 const LAYOUT = ["...1##1..", "..12F#21.", ".13##F#1.", ".1F##3#21", ".1######F"];
 
-/** 地雷の盤面をそのまま縮めたもの */
+/** マインスイーパーの盤面をそのまま縮めたもの */
 export function Thumb() {
   const cells = LAYOUT.flatMap((row, y) =>
     Array.from(row, (mark, x) => ({ mark, x: LEFT + x * CELL, y: TOP + y * CELL })),

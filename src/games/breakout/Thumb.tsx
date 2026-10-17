@@ -10,7 +10,7 @@ const BRICKS = Array.from({ length: COLS * ROWS }, (_, i) => ({
   .filter((brick) => !GONE.has(`${brick.col},${brick.row}`))
   .map((brick) => ({ ...brick, id: `brick-${brick.col}-${brick.row}` }));
 
-/** 壁崩しの画面をそのまま縮めたもの */
+/** ブロック崩しの画面をそのまま縮めたもの */
 export function Thumb() {
   const width = 15;
   const height = 6;

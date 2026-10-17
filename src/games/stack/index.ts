@@ -4,10 +4,10 @@ import { Thumb } from "./Thumb.tsx";
 
 export const stack: GameDefinition = {
   id: "stack",
-  title: "積み木",
-  summary: "動く板を止めて高く積む",
+  title: "スタック",
+  summary: "動くブロックを止めて高く積む",
   description:
-    "左右に動く板を、下の段に重なるところで止める。はみ出した分は切り落とされ、重ならなければおしまい。ぴったり止めると幅がそのまま残る。",
+    "左右に動くブロックを、下の段に重なるところで止める。はみ出した分は切り落とされ、重ならなければおしまい。ぴったり止めると幅がそのまま残る。",
   genre: "アクション",
   players: "1人",
   duration: "1分",

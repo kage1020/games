@@ -14,7 +14,7 @@ const OVER_PAUSE = 900;
 function describe(state: MemoryState): string {
   switch (state.phase) {
     case "show":
-      return `${state.level} 個の数の位置を覚えて、1 を押す`;
+      return `${state.level} 個の数字の位置を覚えて、1 を押す`;
     case "hidden":
       return `${state.next} を押す`;
     case "cleared":
@@ -35,7 +35,7 @@ export default function MemoryGame({ seed, sound, onHud, onFinish }: GameProps) 
   const reportHud = useEffectEvent(onHud);
   useEffect(() => {
     reportHud([
-      { label: "数", value: String(state.level) },
+      { label: "レベル", value: String(state.level) },
       { label: "残り", value: String(MAX_MISSES - state.misses) },
     ]);
   }, [state.level, state.misses]);

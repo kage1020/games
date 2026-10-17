@@ -37,7 +37,7 @@ function PausableStage({ onPause, onResume }: { onPause: () => void; onResume: (
   const [paused, setPaused] = useState(false);
   return (
     <Stage
-      title="蛇"
+      title="スネーク"
       paused={paused}
       onPause={() => {
         onPause();
@@ -69,7 +69,7 @@ describe("Stage", () => {
 
   it("AC-U2 ignores Esc without onPause", async () => {
     render(
-      <Stage title="数の記憶">
+      <Stage title="数字記憶">
         <p>盤面</p>
       </Stage>,
     );

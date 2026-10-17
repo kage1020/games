@@ -14,7 +14,7 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: "all", label: "すべて" },
   { value: "パズル", label: "パズル" },
   { value: "アクション", label: "アクション" },
-  { value: "測定", label: "測定" },
+  { value: "脳トレ", label: "脳トレ" },
 ];
 
 export function HomePage() {

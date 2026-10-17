@@ -125,7 +125,7 @@ export default function StackGame({ paused, sound, reducedMotion, onHud, onFinis
     .filter(({ row }) => row >= firstRow);
   const label = state.over
     ? `おしまい。${height} 段積んだ`
-    : `${height} 段。Space か画面を押して板を止める`;
+    : `${height} 段。Space か画面を押してブロックを止める`;
 
   return (
     <svg

@@ -159,7 +159,7 @@ function TransferPanel() {
   return (
     <div className="settings-stack">
       <p className="small settings-text">
-        別の端末でこのコードを入れると、ランキングの記録を引き継げる。コードは鍵と同じなので、ほかの人には見せない。
+        別の端末でこのコードを入れると、ランキングの記録を引き継げる。コードはパスワードと同じなので、ほかの人には見せない。
       </p>
       <div className="transfer-code">
         <span className="kg-field-label">この端末のコード</span>
@@ -280,7 +280,7 @@ export function SettingsPage() {
           max={100}
           step={10}
           value={settings.volume}
-          format={(volume) => (volume === 0 ? "鳴らさない" : `${volume}%`)}
+          format={(volume) => (volume === 0 ? "ミュート" : `${volume}%`)}
           onChange={(volume) => settingsStore.set((current) => ({ ...current, volume }))}
         />
       </section>

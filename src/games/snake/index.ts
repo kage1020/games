@@ -4,10 +4,10 @@ import { Thumb } from "./Thumb.tsx";
 
 export const snake: GameDefinition = {
   id: "snake",
-  title: "蛇",
-  summary: "伸びながら餌を集める",
+  title: "スネーク",
+  summary: "伸びながらエサを集める",
   description:
-    "蛇を動かして餌を食べる。食べるたびに 1 つ伸び、少しずつ速くなる。壁か自分の体に当たると終わる。",
+    "ヘビを動かしてエサを食べる。食べるたびに 1 マス伸び、少しずつ速くなる。壁か自分の体に当たると終わる。",
   genre: "アクション",
   players: "1人",
   duration: "3分",
@@ -18,7 +18,7 @@ export const snake: GameDefinition = {
   formatScore: (score) => String(score),
   controls: [
     { keys: ["←", "→", "↑", "↓"], text: "で向きを変える" },
-    { text: "画面を払っても曲がる" },
+    { text: "スワイプでも曲がる" },
   ],
   Thumb,
   Game: lazy(() => import("./Game.tsx")),

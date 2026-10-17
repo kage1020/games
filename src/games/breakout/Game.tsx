@@ -53,7 +53,7 @@ export default function BreakoutGame({ paused, sound, onHud, onFinish }: GamePro
   const finish = useEffectEvent(() =>
     onFinish({
       score: state.score,
-      stats: [{ label: "壁", value: String(state.wall), unit: "枚目" }],
+      stats: [{ label: "面", value: String(state.wall) }],
     }),
   );
   useEffect(() => {

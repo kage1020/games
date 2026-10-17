@@ -8,7 +8,7 @@ const TILES: { x: number; y: number; value?: number }[] = [
   { x: 5, y: 3, value: 4 },
 ];
 
-/** 数の記憶の盤面をそのまま縮めたもの */
+/** 数字記憶の盤面をそのまま縮めたもの */
 export function Thumb() {
   const cell = 16;
   const left = (160 - cell * 8) / 2;

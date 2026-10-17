@@ -10,7 +10,7 @@ const BODY: [number, number][] = [
   [8, 5],
 ];
 
-/** 蛇の盤面をそのまま縮めたもの */
+/** スネークの盤面をそのまま縮めたもの */
 export function Thumb() {
   const dots: [number, number][] = [];
   for (let y = 0; y < 9; y++) {

@@ -1,4 +1,4 @@
-/** 反応の 2 つの場面（待つ・押す）を並べたもの */
+/** 反応速度の 2 つの場面（待つ・押す）を並べたもの */
 export function Thumb() {
   return (
     <svg viewBox="0 0 160 90" preserveAspectRatio="xMidYMid slice" aria-hidden="true">

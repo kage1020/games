@@ -5,8 +5,8 @@ import { Thumb } from "./Thumb.tsx";
 
 export const mines: GameDefinition = {
   id: "mines",
-  title: "地雷",
-  summary: "数を手がかりに、地雷を避けて開く",
+  title: "マインスイーパー",
+  summary: "数字を手がかりに、地雷を避けて開く",
   description:
     "数字は周り 8 マスにある地雷の数。地雷のないマスをすべて開くまでの時間を競う。最初に開くマスとその周りには地雷がない。",
   genre: "パズル",
@@ -18,7 +18,7 @@ export const mines: GameDefinition = {
     { id: "easy", label: "初級" },
     { id: "normal", label: "中級" },
   ],
-  modeLabel: "難しさ",
+  modeLabel: "難易度",
   scoreLabel: "時間",
   formatScore: formatDuration,
   formatDelta: (diff) => ({ value: durationDelta(diff), unit: "秒" }),

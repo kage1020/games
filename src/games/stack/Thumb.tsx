@@ -11,7 +11,7 @@ const BLOCKS = [
   [66, 36],
 ].map(([x = 0, width = 0], level) => ({ x, width, level, y: GROUND - (level + 1) * ROW }));
 
-/** 積み木の画面をそのまま縮めたもの */
+/** スタックの画面をそのまま縮めたもの */
 export function Thumb() {
   return (
     <svg viewBox="0 0 160 90" preserveAspectRatio="xMidYMid slice" aria-hidden="true">

@@ -23,7 +23,7 @@ export const territory: GameDefinition = {
   formatScore: (score) => `${score}`,
   controls: [
     { keys: ["←", "→", "↑", "↓"], text: "で向きを変える" },
-    { text: "画面を払っても曲がる" },
+    { text: "スワイプでも曲がる" },
   ],
   Thumb,
   Game: lazy(() => import("./Game.tsx")),

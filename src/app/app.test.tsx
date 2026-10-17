@@ -46,7 +46,7 @@ function FakeGame({ paused, onFinish }: GameProps) {
 function fakeGame(overrides: Partial<GameDefinition>): GameDefinition {
   return {
     id: "snake",
-    title: "蛇",
+    title: "スネーク",
     summary: "伸びながら餌を集める",
     description: "餌を食べると伸びる。",
     genre: "アクション",
@@ -122,7 +122,7 @@ describe("play", () => {
   });
 
   it("AC-U3 keeps an untimed game running when the tab is hidden", async () => {
-    renderApp("/memory", { games: [fakeGame({ id: "memory", title: "数の記憶", timed: false })] });
+    renderApp("/memory", { games: [fakeGame({ id: "memory", title: "数字記憶", timed: false })] });
     await startGame();
     const hidden = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
     await act(async () => {
@@ -262,7 +262,7 @@ describe("play robustness", () => {
   it("AC-U15 records under the mode the run started with", async () => {
     const twoModes = fakeGame({
       id: "mines",
-      title: "地雷",
+      title: "マインスイーパー",
       modes: [
         { id: "easy", label: "初級" },
         { id: "normal", label: "中級" },
@@ -337,7 +337,7 @@ describe("site name", () => {
 
   it.each([
     ["/settings", "記録と設定 — games.kage1020.com"],
-    ["/snake", "蛇 — games.kage1020.com"],
+    ["/snake", "スネーク — games.kage1020.com"],
     ["/nowhere", "見つからない — games.kage1020.com"],
   ])("AC-U16 titles %s as %s", async (path, title) => {
     renderApp(path, { games: [fakeGame({})] });

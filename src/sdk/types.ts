@@ -33,7 +33,7 @@ export interface GameProps {
   onFinish(result: GameResult): void;
 }
 
-export type Genre = "パズル" | "アクション" | "測定";
+export type Genre = "パズル" | "アクション" | "脳トレ";
 export type Aspect = "wide" | "square" | "tall";
 
 export interface ControlHint {

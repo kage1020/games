@@ -4,10 +4,10 @@ import { Thumb } from "./Thumb.tsx";
 
 export const breakout: GameDefinition = {
   id: "breakout",
-  title: "壁崩し",
-  summary: "板で球を返して壁を崩す",
+  title: "ブロック崩し",
+  summary: "ボールを打ち返してブロックを崩す",
   description:
-    "板を動かして球を打ち返し、上の壁を崩す。板の端で返すほど斜めに飛ぶ。壁を崩しきると次の壁が出て、球が少し速くなる。球を 3 つ落とすとおしまい。",
+    "パドルを動かしてボールを打ち返し、上のブロックを崩す。パドルの端で返すほど斜めに飛ぶ。ブロックをすべて崩すと次の面に進み、ボールが少し速くなる。ボールを 3 回落とすとおしまい。",
   genre: "アクション",
   players: "1人",
   duration: "3分",

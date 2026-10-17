@@ -8,7 +8,7 @@ export function RouteError() {
       <title>{pageTitle("読み込めなかった")}</title>
       <h1 className="title">読み込めなかった</h1>
       <Notice tone="danger">
-        画面を読み込めなかった。新しい版が出たか、通信が切れたのかもしれない。読み込み直してほしい。
+        画面を読み込めなかった。新しいバージョンが出たか、通信が切れたのかもしれない。読み込み直してほしい。
       </Notice>
       <div className="route-error-actions">
         <Button variant="primary" onClick={() => window.location.reload()}>
