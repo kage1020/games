@@ -17,7 +17,7 @@ import {
 
 const CELL = 100;
 const MARGIN = 10;
-const LONG_PRESS = 400;
+const LONG_PRESS = 300;
 const WON_PAUSE = 700;
 const LOST_PAUSE = 1400;
 
