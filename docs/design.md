@@ -23,6 +23,12 @@
   - `:root, [data-theme="light"]` に色と影、`[data-theme="dark"]` に上書きとエイリアスの再宣言、`:root` に余白・角丸・大きさ・縦横比・重なり・`--font-<key>`、型スタイルごとに `.<name>` クラス。
 - `bundle.css` は手を入れずに `vendor/kage.css` として読み込む。アプリ固有の配置（ペインの幅、Stage の収め方）だけをアプリ側 CSS に書く。新しい色・角丸・影・フォントは足さない。
 - 部品は `bundle.js` の振る舞いと `index.d.ts` の props を正とし、TSX に移す。リンクを描く部品はルーターに依存せず、`LinkProvider` から渡されたリンク部品で描く。
+- `bundle.js` から振る舞いを変えたところ（デザインシステムに戻すときの候補）：
+  - `Stage`：一時停止中の Esc で再開する（「Esc で続ける」の表示どおりにする）。
+  - `Segmented`：中身をネイティブの radio にした。選択中の見た目は `bundle.css` の `aria-checked` と同じ指定をアプリ側 CSS に置く。
+  - `Result`：`p` に `aria-label` は付けられないため、数え上げの文字は読み上げから外し、最終の数を見えない文字で渡す。
+  - `Gallery`：`div[role=list]` を `ul` / `li` にした。
+  - `AppBar`：画面に別の `h1` があるときのために、タイトルを `div` にもできる（`titleAs`）。
 - アイコンは lucide（`lucide-react`）。16px、ツールバーと AppBar は 20px、`currentColor`。
 - ロゴマークは持たない。帯の名前は `game`（`ui-strong`）＋ `.kage1020.com`（`code`・`ink-muted`）。
 
