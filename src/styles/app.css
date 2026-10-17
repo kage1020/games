@@ -143,8 +143,22 @@ a {
   width: min(100cqw, 100cqh * var(--ratio));
 }
 
+/* 全画面：帯と操作の説明を除いた残りに、縦横比を保ったまま最大の大きさで収める（狭い画面でも） */
 .play-stage:fullscreen .kg-stage-well {
   flex: 1;
+  container-type: size;
+  padding: 0;
+}
+
+.play-stage:fullscreen .kg-stage-screen {
+  width: min(100cqw, 100cqh * var(--ratio));
+  border-radius: 0;
+}
+
+/* 画面の形によらず描けるモードは残りいっぱいに広げる。幅と高さを両方決めると aspect-ratio は効かない */
+.play-stage.is-fill:fullscreen .kg-stage-screen {
+  width: 100cqw;
+  height: 100cqh;
 }
 
 .play-screen {
@@ -477,16 +491,16 @@ a {
     padding: var(--space-2);
   }
 
-  /* はじめる前と結果は、画面の縦横比より背が高ければ画面ごと伸ばす */
-  .play-stage .kg-stage-screen:has(> .play-screen > .play-panel) {
+  /* はじめる前と結果は、画面の縦横比より背が高ければ画面ごと伸ばす。全画面では画面の中でスクロールする */
+  .play-stage:not(:fullscreen) .kg-stage-screen:has(> .play-screen > .play-panel) {
     overflow: visible;
   }
 
-  .play-screen:has(> .play-panel) {
+  .play-stage:not(:fullscreen) .play-screen:has(> .play-panel) {
     position: static;
   }
 
-  .play-panel {
+  .play-stage:not(:fullscreen) .play-panel {
     position: static;
     min-height: 100%;
   }

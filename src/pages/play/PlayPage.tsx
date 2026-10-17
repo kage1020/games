@@ -181,6 +181,9 @@ function Play({ game }: { game: GameDefinition }) {
     }
   };
 
+  // 遊んでいる間と結果は、別のタブでモードを変えても始めたときのモードの形で描く
+  const shownMode = session.status === "ready" ? mode : runMode;
+  const fill = game.modes.find((option) => option.id === shownMode)?.fill === true;
   const modeRecord = getModeRecord(records, game.id, mode);
   const modeFormat = scoreFormat(game, mode);
   const favorite = settings.favorites.includes(game.id);
@@ -230,7 +233,7 @@ function Play({ game }: { game: GameDefinition }) {
           items={[{ label: "一覧", href: "/" }, { label: game.title }]}
         />
         <Stage
-          className="play-stage"
+          className={fill ? "play-stage is-fill" : "play-stage"}
           style={{ "--ratio": RATIO[game.aspect] } as CSSProperties}
           title={game.title}
           aspect={game.aspect}

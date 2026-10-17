@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { resizeElement } from "../../test-setup.ts";
 import MinesGame from "./Game.tsx";
 import { createInfinite, isMine, reveal } from "./infinite.ts";
 
@@ -181,6 +182,52 @@ describe("MinesGame infinite", () => {
     const numbers = container.querySelectorAll("text").length;
     expect(numbers).toBeGreaterThan(0);
     expect(container.querySelectorAll("svg *").length).toBeLessThan(numbers + 20);
+  });
+
+  it("AC-G-mines-16 fills the shape of the screen, keeping the middle and the shorter side", () => {
+    render(<MinesGame {...props()} mode="infinite" />);
+    const svg = screen.getByRole("img");
+    const box = () => (svg.getAttribute("viewBox") ?? "").split(" ").map(Number);
+    expect(box()).toEqual([-500, -500, 1100, 1100]);
+    act(() => resizeElement(svg, 1600, 800));
+    expect(box()).toEqual([-1050, -500, 2200, 1100]);
+    act(() => resizeElement(svg, 400, 800));
+    expect(box()).toEqual([-500, -1050, 1100, 2200]);
+    act(() => resizeElement(svg, 0, 0));
+    expect(box()).toEqual([-500, -1050, 1100, 2200]);
+  });
+
+  it("AC-G-mines-16 maps a press anywhere on a wide screen to the cell under it", () => {
+    const { container } = render(<MinesGame {...props()} mode="infinite" />);
+    const svg = screen.getByRole("img");
+    svg.getBoundingClientRect = () => DOMRect.fromRect({ x: 0, y: 0, width: 1600, height: 800 });
+    act(() => resizeElement(svg, 1600, 800));
+    fireEvent.pointerDown(svg, { pointerId: 1, button: 2, clientX: 1590, clientY: 10 });
+    fireEvent.pointerDown(svg, { pointerId: 1, button: 2, clientX: 5, clientY: 795 });
+    const flags = [...container.querySelectorAll(".mines-flag")].map((flag) => [
+      Number(flag.getAttribute("x")),
+      Number(flag.getAttribute("y")),
+    ]);
+    expect(flags).toEqual(
+      expect.arrayContaining([
+        [1100, -500],
+        [-1100, 500],
+      ]),
+    );
+  });
+
+  it("AC-G-mines-16 keeps the cursor in view along the longer side", () => {
+    render(<MinesGame {...props()} mode="infinite" />);
+    const svg = screen.getByRole("img");
+    act(() => resizeElement(svg, 1600, 800));
+    act(() => {
+      for (let i = 0; i < 9; i++) fireEvent.keyDown(window, { key: "ArrowRight" });
+    });
+    expect(viewBoxX(svg)).toBe(-1050);
+    act(() => {
+      fireEvent.keyDown(window, { key: "ArrowRight" });
+    });
+    expect(viewBoxX(svg)).toBe(-1000);
   });
 
   it("AC-G-mines-10 finishes on a mine with the opened count as the score", () => {

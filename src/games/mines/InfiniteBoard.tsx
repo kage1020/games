@@ -14,8 +14,12 @@ export interface InfiniteBoardProps {
   start: Cell | null;
   over: boolean;
   exploded: Cell | null;
-  camera: Cell;
-  span: number;
+  /** 映す範囲の左上（マスの単位、小数もある） */
+  left: number;
+  top: number;
+  /** 映す範囲の縦横のマスの数 */
+  width: number;
+  height: number;
   /** キー操作のカーソル。出さないときは null */
   cursor: Cell | null;
   pressing: Cell | null;
@@ -33,8 +37,10 @@ export const InfiniteBoard = memo(function InfiniteBoard({
   start,
   over,
   exploded,
-  camera,
-  span,
+  left,
+  top,
+  width,
+  height,
   cursor,
   pressing,
 }: InfiniteBoardProps) {
@@ -42,8 +48,8 @@ export const InfiniteBoard = memo(function InfiniteBoard({
   const dots: string[] = [];
   const marks: ReactNode[] = [];
   const flags: ReactNode[] = [];
-  for (let y = Math.floor(camera.y); y < camera.y + span; y++) {
-    for (let x = Math.floor(camera.x); x < camera.x + span; x++) {
+  for (let y = Math.floor(top); y < top + height; y++) {
+    for (let x = Math.floor(left); x < left + width; x++) {
       const key = cellKey(x, y);
       const px = x * CELL;
       const py = y * CELL;
@@ -99,9 +105,6 @@ export const InfiniteBoard = memo(function InfiniteBoard({
     }
   }
 
-  const left = camera.x * CELL;
-  const top = camera.y * CELL;
-  const extent = span * CELL;
   return (
     <>
       <defs>
@@ -121,10 +124,10 @@ export const InfiniteBoard = memo(function InfiniteBoard({
         </g>
       </defs>
       <rect
-        x={left}
-        y={top}
-        width={extent}
-        height={extent}
+        x={left * CELL}
+        y={top * CELL}
+        width={width * CELL}
+        height={height * CELL}
         style={{ fill: `url(#${prefix}-closed)` }}
       />
       {opened.length > 0 ? <path d={opened.join("")} style={{ fill: "var(--bg)" }} /> : null}

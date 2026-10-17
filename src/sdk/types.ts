@@ -53,6 +53,11 @@ export interface GameMode {
   label: string;
   /** 記録の種類がゲームのほかのモードと違うときだけ書く */
   score?: ScoreFormat;
+  /**
+   * 画面の形によらず描ける（端のない盤面など）。全画面では描画領域が縦横比をやめて画面いっぱいに広がるので、
+   * ゲームは描画領域の大きさを測って映す範囲を決める
+   */
+  fill?: boolean;
 }
 
 export interface GameDefinition {

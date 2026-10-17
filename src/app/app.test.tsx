@@ -300,6 +300,29 @@ describe("play robustness", () => {
     expect(recordsStore.get().mines?.easy?.best).toBe(9_000);
     expect(recordsStore.get().mines?.normal).toBeUndefined();
   });
+
+  it("AC-U21 marks the stage to fill the screen while the current mode can draw any shape", async () => {
+    const fillMode = fakeGame({
+      id: "mines",
+      title: "マインスイーパー",
+      modes: [
+        { id: "easy", label: "初級" },
+        { id: "infinite", label: "無限", fill: true },
+      ],
+    });
+    renderApp("/mines", { games: [fillMode] });
+    const stage = await screen.findByRole("region", { name: "マインスイーパー" });
+    expect(stage).not.toHaveClass("is-fill");
+    await userEvent.click(screen.getByRole("radio", { name: "無限" }));
+    expect(stage).toHaveClass("is-fill");
+    await startGame();
+    act(() => {
+      settingsStore.set((current) => ({ ...current, modes: { mines: "easy" } }));
+    });
+    expect(stage).toHaveClass("is-fill");
+    await act(async () => finishGame?.(30));
+    expect(stage).toHaveClass("is-fill");
+  });
 });
 
 describe("settings robustness", () => {

@@ -1,48 +1,60 @@
 import type { Cell } from "./infinite.ts";
 
-/** 画面に映すマスの数（一辺）の範囲。広げすぎると数字が読めず、描くものも増える */
+/** 短いほうの辺に並べるマスの数の範囲。広げすぎると数字が読めず、描くものも増える */
 export const MIN_SPAN = 6;
 export const MAX_SPAN = 40;
 /** カーソルと画面の端の間に空けるマスの数 */
 const EDGE = 1;
 
+/** 縦横に並ぶマスの数（小数もある） */
+export interface FrameSize {
+  width: number;
+  height: number;
+}
+
 export function clampSpan(span: number): number {
   return Math.min(MAX_SPAN, Math.max(MIN_SPAN, span));
 }
 
-/** anchor（盤面の位置）が画面上で動かないように、span を next にしたときの左上を返す */
-export function zoomAt(camera: Cell, span: number, anchor: Cell, next: number): Cell {
+/** 短いほうの辺に span マス並べたときの縦横のマスの数。aspect は画面の横 / 縦 */
+export function frameSize(span: number, aspect: number): FrameSize {
+  return aspect >= 1
+    ? { width: span * aspect, height: span }
+    : { width: span, height: span / aspect };
+}
+
+/** anchor（盤面の位置）が画面上で動かないように、span を next にしたときの真ん中を返す */
+export function zoomAt(center: Cell, span: number, anchor: Cell, next: number): Cell {
   const ratio = next / span;
   return {
-    x: anchor.x - (anchor.x - camera.x) * ratio,
-    y: anchor.y - (anchor.y - camera.y) * ratio,
+    x: anchor.x - (anchor.x - center.x) * ratio,
+    y: anchor.y - (anchor.y - center.y) * ratio,
   };
 }
 
-/** カーソルが画面の端から EDGE マスより内側に入るように左上を動かす */
-export function follow(camera: Cell, span: number, cursor: Cell): Cell {
-  const axis = (from: number, at: number) => {
-    if (at < from + EDGE) return at - EDGE;
-    if (at + 1 > from + span - EDGE) return at + 1 - span + EDGE;
-    return from;
+/** カーソルが画面の端から EDGE マスより内側に入るように真ん中を動かす */
+export function follow(center: Cell, size: FrameSize, cursor: Cell): Cell {
+  const axis = (middle: number, length: number, at: number) => {
+    const from = middle - length / 2;
+    if (at < from + EDGE) return at - EDGE + length / 2;
+    if (at + 1 > from + length - EDGE) return at + 1 + EDGE - length / 2;
+    return middle;
   };
-  return { x: axis(camera.x, cursor.x), y: axis(camera.y, cursor.y) };
+  return { x: axis(center.x, size.width, cursor.x), y: axis(center.y, size.height, cursor.y) };
 }
 
-/** 画面上の位置を盤面の位置（マスの単位）にする。SVG は正方形を縦横の短いほうに合わせて中央に置く */
+/** 画面上の位置を盤面の位置（マスの単位）にする。マスの大きさは短いほうの辺で決まる */
 export function boardPoint(
   rect: DOMRect,
-  camera: Cell,
+  center: Cell,
   span: number,
   clientX: number,
   clientY: number,
 ): Cell | null {
   const size = Math.min(rect.width, rect.height);
   if (size === 0) return null;
-  const left = rect.left + (rect.width - size) / 2;
-  const top = rect.top + (rect.height - size) / 2;
   return {
-    x: camera.x + ((clientX - left) * span) / size,
-    y: camera.y + ((clientY - top) * span) / size,
+    x: center.x + ((clientX - rect.left - rect.width / 2) * span) / size,
+    y: center.y + ((clientY - rect.top - rect.height / 2) * span) / size,
   };
 }

@@ -20,6 +20,7 @@ export const mines: GameDefinition = {
     {
       id: "infinite",
       label: "無限",
+      fill: true,
       score: {
         label: "開いたマス",
         format: formatNumber,

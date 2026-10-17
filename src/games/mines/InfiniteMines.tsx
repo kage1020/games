@@ -22,9 +22,9 @@ import {
   tick,
   toggleFlag,
 } from "./infinite.ts";
-import { boardPoint, clampSpan, follow, zoomAt } from "./infiniteView.ts";
+import { boardPoint, clampSpan, follow, frameSize, zoomAt } from "./infiniteView.ts";
 
-/** 始めたときに映すマスの数（一辺） */
+/** 始めたときに短いほうの辺に並べるマスの数 */
 const START_SPAN = 11;
 /** これ以上動かしたらマスを押したのではなく盤面を動かしたとみなす（px） */
 const PAN_THRESHOLD = 8;
@@ -37,15 +37,17 @@ const WHEEL_LINE = 16;
 
 /** 画面に映す範囲 */
 interface Frame {
-  /** 左上の盤面の位置（マスの単位、小数もある） */
-  camera: Cell;
-  /** 一辺のマスの数 */
+  /** 画面の真ん中に映す盤面の位置（マスの単位、小数もある） */
+  center: Cell;
+  /** 短いほうの辺に並べるマスの数 */
   span: number;
 }
 
 interface View extends Frame {
   game: InfiniteState;
   cursor: Cell;
+  /** 画面の横 / 縦 */
+  aspect: number;
 }
 
 type Action =
@@ -55,7 +57,8 @@ type Action =
   | { type: "open"; cell?: Cell }
   | { type: "flag"; cell?: Cell }
   | { type: "frame"; frame: Frame }
-  | { type: "zoom"; factor: number };
+  | { type: "zoom"; factor: number }
+  | { type: "resize"; aspect: number };
 
 function reduce(view: View, action: Action): View {
   switch (action.type) {
@@ -65,7 +68,8 @@ function reduce(view: View, action: Action): View {
     }
     case "move": {
       const cursor = { x: view.cursor.x + action.dx, y: view.cursor.y + action.dy };
-      return { ...view, cursor, camera: follow(view.camera, view.span, cursor) };
+      const center = follow(view.center, frameSize(view.span, view.aspect), cursor);
+      return { ...view, cursor, center };
     }
     case "point":
       return { ...view, cursor: action.cell };
@@ -82,9 +86,11 @@ function reduce(view: View, action: Action): View {
     case "zoom": {
       const span = clampSpan(view.span * action.factor);
       const anchor = { x: view.cursor.x + 0.5, y: view.cursor.y + 0.5 };
-      const camera = zoomAt(view.camera, view.span, anchor, span);
-      return { ...view, span, camera: follow(camera, span, view.cursor) };
+      const center = zoomAt(view.center, view.span, anchor, span);
+      return { ...view, span, center: follow(center, frameSize(span, view.aspect), view.cursor) };
     }
+    case "resize":
+      return action.aspect === view.aspect ? view : { ...view, aspect: action.aspect };
   }
 }
 
@@ -109,7 +115,7 @@ interface Press {
   clientX: number;
   clientY: number;
   frame: Frame;
-  /** 盤面を映している正方形の一辺（px） */
+  /** 画面の短いほうの辺（px） */
   size: number;
 }
 
@@ -136,8 +142,9 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
   const [view, dispatch] = useReducer(reduce, seed, (initial) => ({
     game: createInfinite(initial),
     cursor: { x: 0, y: 0 },
-    camera: { x: -(START_SPAN - 1) / 2, y: -(START_SPAN - 1) / 2 },
+    center: { x: 0.5, y: 0.5 },
     span: START_SPAN,
+    aspect: 1,
   }));
   const [keyboard, setKeyboard] = useState(false);
   const [pressing, setPressing] = useState<Cell | null>(null);
@@ -147,7 +154,7 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
   const pinch = useRef<Pinch | null>(null);
   const pending = useRef<Frame | null>(null);
   const frameRequest = useRef<number | null>(null);
-  const { game, cursor, camera, span } = view;
+  const { game, cursor, center, span, aspect } = view;
   const over = game.phase === "lost";
 
   useGameLoop((dt) => dispatch({ type: "tick", dt }), !paused && game.phase === "playing");
@@ -190,7 +197,7 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
   }, [paused, over]);
 
   /** まだ描いていない動きも含めた、いまの範囲 */
-  const currentFrame = (): Frame => pending.current ?? { camera, span };
+  const currentFrame = (): Frame => pending.current ?? { center, span };
 
   /** ドラッグ・ピンチ・ホイールで動かした範囲は、次のフレームでまとめて描く */
   const scheduleFrame = (frame: Frame) => {
@@ -246,7 +253,7 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
     const base = currentFrame();
     const anchor = boardPoint(
       svg.getBoundingClientRect(),
-      base.camera,
+      base.center,
       base.span,
       event.clientX,
       event.clientY,
@@ -255,7 +262,7 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
     const delta =
       event.deltaMode === WheelEvent.DOM_DELTA_LINE ? event.deltaY * WHEEL_LINE : event.deltaY;
     const next = clampSpan(base.span * Math.exp(delta * WHEEL_RATE));
-    scheduleFrame({ camera: zoomAt(base.camera, base.span, anchor, next), span: next });
+    scheduleFrame({ center: zoomAt(base.center, base.span, anchor, next), span: next });
   });
   useEffect(() => {
     const svg = svgRef.current;
@@ -264,6 +271,20 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
     const listener = (event: WheelEvent) => onWheel(event);
     svg.addEventListener("wheel", listener, { passive: false });
     return () => svg.removeEventListener("wheel", listener);
+  }, []);
+
+  // 描画領域の形に合わせて映す範囲を広げる。大きさが 0 の間は前の形のまま
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const observer = new ResizeObserver((entries) => {
+      const box = entries.at(-1)?.contentRect;
+      if (box && box.width > 0 && box.height > 0) {
+        dispatch({ type: "resize", aspect: box.width / box.height });
+      }
+    });
+    observer.observe(svg);
+    return () => observer.disconnect();
   }, []);
 
   useGameKeys((event) => {
@@ -300,7 +321,7 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
     cancelPress();
     const [a, b] = points;
     const base = currentFrame();
-    const anchor = boardPoint(rect, base.camera, base.span, (a.x + b.x) / 2, (a.y + b.y) / 2);
+    const anchor = boardPoint(rect, base.center, base.span, (a.x + b.x) / 2, (a.y + b.y) / 2);
     const distance = Math.hypot(a.x - b.x, a.y - b.y);
     pinch.current = anchor && distance > 0 ? { distance, anchor, span: base.span, rect } : null;
   };
@@ -312,12 +333,11 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
     const span = clampSpan((current.span * current.distance) / Math.hypot(a.x - b.x, a.y - b.y));
     const { rect } = current;
     const size = Math.min(rect.width, rect.height);
-    const left = rect.left + (rect.width - size) / 2;
-    const top = rect.top + (rect.height - size) / 2;
+    const middle = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
     scheduleFrame({
-      camera: {
-        x: current.anchor.x - (((a.x + b.x) / 2 - left) * span) / size,
-        y: current.anchor.y - (((a.y + b.y) / 2 - top) * span) / size,
+      center: {
+        x: current.anchor.x - (((a.x + b.x) / 2 - middle.x) * span) / size,
+        y: current.anchor.y - (((a.y + b.y) / 2 - middle.y) * span) / size,
       },
       span,
     });
@@ -336,7 +356,7 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
       }
     }
     const base = currentFrame();
-    const point = boardPoint(rect, base.camera, base.span, event.clientX, event.clientY);
+    const point = boardPoint(rect, base.center, base.span, event.clientX, event.clientY);
     if (point === null) return;
     event.preventDefault();
     const cell = { x: Math.floor(point.x), y: Math.floor(point.y) };
@@ -388,9 +408,9 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
       current.panning = true;
       setPressing(null);
     }
-    const { camera: from, span: across } = current.frame;
+    const { center: from, span: across } = current.frame;
     scheduleFrame({
-      camera: {
+      center: {
         x: from.x - (dx * across) / current.size,
         y: from.y - (dy * across) / current.size,
       },
@@ -415,15 +435,15 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
     cancelPress();
   };
 
-  const left = camera.x * CELL;
-  const top = camera.y * CELL;
-  const extent = span * CELL;
+  const size = frameSize(span, aspect);
+  const left = center.x - size.width / 2;
+  const top = center.y - size.height / 2;
 
   return (
     <svg
       ref={svgRef}
       className="game-svg"
-      viewBox={`${left} ${top} ${extent} ${extent}`}
+      viewBox={`${left * CELL} ${top * CELL} ${size.width * CELL} ${size.height * CELL}`}
       role="img"
       aria-label={describe(game)}
       onPointerDown={onPointerDown}
@@ -440,8 +460,10 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
         start={game.start}
         over={over}
         exploded={game.exploded}
-        camera={camera}
-        span={span}
+        left={left}
+        top={top}
+        width={size.width}
+        height={size.height}
         cursor={keyboard && !over ? cursor : null}
         pressing={pressing}
       />
