@@ -119,6 +119,10 @@ interface GameProps {
 - AC-T7 型スタイルごとに `.<name> { font-family; font-size; line-height; font-weight; letter-spacing? }` が出る。family はグループの family の変数。数値の `fontWeight` はそのまま、単位のない `lineHeight` はそのまま。
 - AC-T8 リポジトリの `tokens.css` は `vendor/tokens.json` から生成した結果と一致する。
 
+## AC-I 共有用の画像（`scripts/lib/og.ts`）
+- AC-I1 画像はサイト名（`games` を `ui-strong` 相当、`.kage1020.com` を等幅・`ink-muted`）と一文だけを描く。ゲームの数やサムネイルは描かない（ゲームを足しても作り直さなくてよい）。
+- AC-I2 絵にする前に `var(--<色>)` をライトテーマの色に、`var(--font-<key>)` をフォントの並びに置き換え、`font:` の一括指定を `font-weight`・`font-size`・`font-family` に開く（resvg は CSS 変数と一括指定を読まない）。
+
 ## AC-S 共有の規則（`shared/`）
 ### 目録 `catalog.ts`
 - AC-S1 8 つのゲーム id がある。各ゲームは 1 つ以上のモード、記録の向き（`asc` / `desc`）、記録の下限と上限を持つ。

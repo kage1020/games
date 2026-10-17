@@ -26,7 +26,7 @@ Cloudflare まわりは `cf`（Cloudflare CLI）で扱い、設定は `cloudflar
 | `pnpm check` | Biome |
 | `pnpm typecheck` | Worker の型を作り直してから TypeScript（アプリ・Worker・設定ファイルの 3 プロジェクト） |
 | `pnpm tokens` | `src/design-system/vendor/tokens.json` から `tokens.css` を作り直す |
-| `pnpm og` | 一覧のサムネイルから共有用の画像 `public/og.png` を作り直す（ゲームを足したとき） |
+| `pnpm og` | サイト名と一文から共有用の画像 `public/og.png` を作り直す（トークンかサイト名を変えたとき。ゲームを足しても要らない） |
 | `pnpm cf:types` | `cloudflare.config.ts` から `.cloudflare/types/index.d.ts`（`Env` と Workers の型）を作り直す |
 
 ## デザインシステムを更新するとき

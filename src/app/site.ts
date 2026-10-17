@@ -2,6 +2,7 @@
 export const SITE_LABEL = "games";
 export const SITE_DOMAIN = ".kage1020.com";
 export const SITE_NAME = `${SITE_LABEL}${SITE_DOMAIN}`;
+export const SITE_TAGLINE = "小さな遊び。どれも登録なしで遊べる。";
 
 export function pageTitle(page?: string): string {
   return page ? `${page} — ${SITE_NAME}` : SITE_NAME;
