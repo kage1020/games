@@ -325,3 +325,22 @@ describe("settings robustness", () => {
     expect(identityStore.get()).toBeNull();
   });
 });
+
+describe("site name", () => {
+  it("AC-U16 links games.kage1020.com to the list and puts it in every title", async () => {
+    renderApp("/", { games: [fakeGame({})] });
+    const home = screen.getByRole("link", { name: /kage1020/ });
+    expect(home.textContent).toBe("games.kage1020.com");
+    expect(home.getAttribute("href")).toBe("/");
+    await waitFor(() => expect(document.title).toBe("games.kage1020.com"));
+  });
+
+  it.each([
+    ["/settings", "記録と設定 — games.kage1020.com"],
+    ["/snake", "蛇 — games.kage1020.com"],
+    ["/nowhere", "見つからない — games.kage1020.com"],
+  ])("AC-U16 titles %s as %s", async (path, title) => {
+    renderApp(path, { games: [fakeGame({})] });
+    await waitFor(() => expect(document.title).toBe(title));
+  });
+});

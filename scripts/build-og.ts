@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { Resvg } from "@resvg/resvg-js";
 import { createServer } from "vite";
+import { SITE_DOMAIN, SITE_LABEL } from "../src/app/site.ts";
 import { alias } from "../vite.config.ts";
 import { resolveThemeColors } from "./lib/color.ts";
 import type { Tokens } from "./lib/tokens-to-css.ts";
@@ -63,7 +64,7 @@ try {
   const size = { width, height: Math.round((width * 9) / 16) };
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}">
   <rect width="${WIDTH}" height="${HEIGHT}" fill="var(--bg)"/>
-  <text x="${MARGIN}" y="${MARGIN + 28}" style="font: 600 32px var(--font-sans)" fill="var(--ink)">game<tspan style="font: 400 28px var(--font-mono)" fill="var(--ink-muted)">.kage1020.com</tspan></text>
+  <text x="${MARGIN}" y="${MARGIN + 28}" style="font: 600 32px var(--font-sans)" fill="var(--ink)">${SITE_LABEL}<tspan style="font: 400 28px var(--font-mono)" fill="var(--ink-muted)">${SITE_DOMAIN}</tspan></text>
   <text x="${MARGIN}" y="${MARGIN + 104}" style="font: 500 56px var(--font-sans)" fill="var(--ink)">${thumbs.length} つのゲーム</text>
   <text x="${MARGIN}" y="${MARGIN + 150}" style="font: 400 26px var(--font-sans)" fill="var(--ink-muted)">小さな遊び。どれも登録なしで遊べる。</text>
   ${thumbs.map((thumb, i) => place(thumb, i, size)).join("\n  ")}

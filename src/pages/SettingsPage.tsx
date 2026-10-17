@@ -3,6 +3,7 @@ import { normalizeName } from "@shared/name.ts";
 import { Copy, Eye, EyeOff } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { useGames } from "@/app/games-context.tsx";
+import { pageTitle } from "@/app/site.ts";
 import {
   Button,
   EmptyState,
@@ -258,7 +259,7 @@ export function SettingsPage() {
   const settings = useStore(settingsStore);
   return (
     <main className="page narrow settings">
-      <title>記録と設定 — game.kage1020.com</title>
+      <title>{pageTitle("記録と設定")}</title>
       <h1 className="title">記録と設定</h1>
       <section className="settings-section" aria-labelledby="settings-display">
         <SectionHead id="settings-display">表示</SectionHead>

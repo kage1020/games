@@ -12,6 +12,7 @@ import {
 } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useGame } from "@/app/games-context.tsx";
+import { pageTitle } from "@/app/site.ts";
 import {
   Breadcrumb,
   Kbd,
@@ -219,7 +220,7 @@ function Play({ game }: { game: GameDefinition }) {
 
   return (
     <main className="page play">
-      <title>{`${game.title} — game.kage1020.com`}</title>
+      <title>{pageTitle(game.title)}</title>
       <div className="play-main">
         <Breadcrumb
           className="play-crumb"

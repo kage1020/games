@@ -1,4 +1,4 @@
-# game.kage1020.com 設計
+# games.kage1020.com 設計
 
 登録なしで遊べる小さなゲームの遊び場。デザインシステム kage1020（<https://claude.ai/artifact/Fmj3KNMPbXH8ghAYjoz9ZA>）を額縁として使い、ゲームの中身には染み出させる。
 
@@ -15,7 +15,7 @@
 | `worker/` | Cloudflare Worker。`/api/*` だけを受け持つ |
 | `migrations/` | D1 のスキーマ |
 
-配信は Cloudflare Workers の静的アセット（`not_found_handling: single-page-application`、`run_worker_first: ["/api/*"]`）。カスタムドメイン `game.kage1020.com`。
+配信は Cloudflare Workers の静的アセット（`not_found_handling: single-page-application`、`run_worker_first: ["/api/*"]`）。カスタムドメイン `games.kage1020.com`。
 
 ## デザインシステムの取り込み
 
@@ -30,7 +30,7 @@
   - `Gallery`：`div[role=list]` を `ul` / `li` にした。
   - `AppBar`：画面に別の `h1` があるときのために、タイトルを `div` にもできる（`titleAs`）。
 - アイコンは lucide（`lucide-react`）。16px、ツールバーと AppBar は 20px、`currentColor`。
-- ロゴマークは持たない。帯の名前は `game`（`ui-strong`）＋ `.kage1020.com`（`code`・`ink-muted`）。
+- ロゴマークは持たない。帯の名前は `games`（`ui-strong`）＋ `.kage1020.com`（`code`・`ink-muted`）。
 
 ## 画面
 
@@ -187,6 +187,7 @@ interface GameProps {
 - AC-U13 ゲームや画面を読み込めなかったときは、帯を残したまま、原因と「読み込み直す」を出す。
 - AC-U14 結果の画面に出す順位は、その回の送信の応答だけから取る（前の回の応答が遅れて届いても書き込まない）。
 - AC-U15 遊んでいる間に別のタブでモードを変えても、その回は始めたときのモードで記録する。
+- AC-U16 帯のサイト名は `games.kage1020.com` で、一覧へのリンクになる。文書のタイトルは一覧では `games.kage1020.com`、ほかの画面では `<画面の名前> — games.kage1020.com`。
 
 ## AC-O 送信待ち（`src/platform/ranking/outbox.ts`）
 - AC-O1 送信待ちは古い順に送り、送れたものは消す。

@@ -4,14 +4,15 @@ import { AppBar, Button } from "@/design-system/index.ts";
 import { useMediaQuery } from "@/platform/media.ts";
 import { toggleTheme, useResolvedTheme } from "@/platform/theme.ts";
 import { useGames } from "./games-context.tsx";
+import { SITE_DOMAIN, SITE_LABEL } from "./site.ts";
 
 export const NARROW = "(max-width: 640px)";
 
 function SiteName() {
   return (
     <Link to="/" className="site-name">
-      <span className="ui-strong">game</span>
-      <span className="code site-domain">.kage1020.com</span>
+      <span className="ui-strong">{SITE_LABEL}</span>
+      <span className="code site-domain">{SITE_DOMAIN}</span>
     </Link>
   );
 }

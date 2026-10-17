@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useGames } from "@/app/games-context.tsx";
+import { pageTitle } from "@/app/site.ts";
 import { ContentCard, Gallery, Segmented } from "@/design-system/index.ts";
 import { getModeRecord } from "@/platform/records/records.ts";
 import { recordsStore } from "@/platform/records/store.ts";
@@ -36,7 +37,7 @@ export function HomePage() {
 
   return (
     <main className="page home">
-      <title>game.kage1020.com</title>
+      <title>{pageTitle()}</title>
       <div className="home-head">
         <div className="home-lead">
           <h1 className="figure">{visible.length} つのゲーム</h1>

@@ -1,4 +1,4 @@
-# game.kage1020.com
+# games.kage1020.com
 
 登録なしで遊べる小さなゲームの遊び場。見た目と振る舞いはデザインシステム kage1020（<https://claude.ai/artifact/Fmj3KNMPbXH8ghAYjoz9ZA>）に従う。設計と受け入れ条件は [docs/design.md](docs/design.md)。
 
@@ -43,7 +43,7 @@ Cloudflare まわりは `cf`（Cloudflare CLI）で扱い、設定は `cloudflar
 
 ## 公開
 
-`cloudflare.config.ts` は `game.kage1020.com` をカスタムドメインとして持ち、D1 データベース `games` を使う。`cf auth login` でサインインしてから流す。
+`cloudflare.config.ts` は `games.kage1020.com` をカスタムドメインとして持ち、D1 データベース `games` を使う。`cf auth login` でサインインしてから流す。
 
 ```sh
 pnpm db:migrate:remote   # 本番の D1 にスキーマを入れる

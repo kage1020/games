@@ -31,7 +31,7 @@ function setup() {
       options.rawBody ?? (options.body === undefined ? undefined : JSON.stringify(options.body));
     if (body !== undefined) headers.set("content-type", "application/json");
     const response = await handleApi(
-      new Request(`https://game.kage1020.com${path}`, { method, headers, body }),
+      new Request(`https://games.kage1020.com${path}`, { method, headers, body }),
       deps,
     );
     return { status: response.status, json: (await response.json()) as Record<string, unknown> };
