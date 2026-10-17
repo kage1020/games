@@ -2,7 +2,7 @@ export const CELL = 100;
 export const LONG_PRESS = 300;
 export const LOST_PAUSE = 1400;
 
-function Flag() {
+export function Flag() {
   return (
     <g>
       <path d="M40 24 L72 37 L40 50 Z" style={{ fill: "var(--ink)" }} />

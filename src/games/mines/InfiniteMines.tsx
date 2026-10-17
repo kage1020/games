@@ -1,32 +1,51 @@
-import { type PointerEvent, useEffect, useEffectEvent, useReducer, useRef, useState } from "react";
+import {
+  type PointerEvent,
+  useEffect,
+  useEffectEvent,
+  useId,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import { formatDuration, formatNumber } from "@/platform/format.ts";
 import { DIRECTIONS, directionFromKey } from "@/sdk/grid.ts";
 import { useGameKeys, useGameLoop } from "@/sdk/hooks.ts";
 import type { GameProps } from "@/sdk/types.ts";
-import { CELL, CellView, LONG_PRESS, LOST_PAUSE, PressRing } from "./CellView.tsx";
+import { CELL, LONG_PRESS, LOST_PAUSE } from "./CellView.tsx";
+import { InfiniteBoard } from "./InfiniteBoard.tsx";
 import {
   type Cell,
   cellKey,
   createInfinite,
   type InfiniteState,
-  isMine,
   reveal,
   tick,
   toggleFlag,
 } from "./infinite.ts";
+import { boardPoint, clampSpan, follow, zoomAt } from "./infiniteView.ts";
 
-/** 画面に映すマスの数（一辺） */
-const VIEW = 11;
-/** カーソルと画面の端の間に空けるマスの数 */
-const EDGE = 1;
+/** 始めたときに映すマスの数（一辺） */
+const START_SPAN = 11;
 /** これ以上動かしたらマスを押したのではなく盤面を動かしたとみなす（px） */
 const PAN_THRESHOLD = 8;
+/** + / - キー 1 回で変える倍率 */
+const KEY_ZOOM = 1.25;
+/** ホイールの 1px あたりの拡大・縮小の強さ */
+const WHEEL_RATE = 0.002;
+/** 行単位で届くホイールを px にする */
+const WHEEL_LINE = 16;
 
-interface View {
+/** 画面に映す範囲 */
+interface Frame {
+  /** 左上の盤面の位置（マスの単位、小数もある） */
+  camera: Cell;
+  /** 一辺のマスの数 */
+  span: number;
+}
+
+interface View extends Frame {
   game: InfiniteState;
   cursor: Cell;
-  /** 画面の左上に映す盤面の位置（マスの単位、小数もある） */
-  camera: Cell;
 }
 
 type Action =
@@ -35,17 +54,8 @@ type Action =
   | { type: "point"; cell: Cell }
   | { type: "open"; cell?: Cell }
   | { type: "flag"; cell?: Cell }
-  | { type: "pan"; camera: Cell };
-
-/** カーソルが画面の端から EDGE マスより内側に入るように画面を動かす */
-function follow(camera: Cell, cursor: Cell): Cell {
-  const axis = (from: number, at: number) => {
-    if (at < from + EDGE) return at - EDGE;
-    if (at + 1 > from + VIEW - EDGE) return at + 1 - VIEW + EDGE;
-    return from;
-  };
-  return { x: axis(camera.x, cursor.x), y: axis(camera.y, cursor.y) };
-}
+  | { type: "frame"; frame: Frame }
+  | { type: "zoom"; factor: number };
 
 function reduce(view: View, action: Action): View {
   switch (action.type) {
@@ -55,7 +65,7 @@ function reduce(view: View, action: Action): View {
     }
     case "move": {
       const cursor = { x: view.cursor.x + action.dx, y: view.cursor.y + action.dy };
-      return { ...view, cursor, camera: follow(view.camera, cursor) };
+      return { ...view, cursor, camera: follow(view.camera, view.span, cursor) };
     }
     case "point":
       return { ...view, cursor: action.cell };
@@ -67,8 +77,14 @@ function reduce(view: View, action: Action): View {
       const { x, y } = action.cell ?? view.cursor;
       return { ...view, game: toggleFlag(view.game, x, y) };
     }
-    case "pan":
-      return { ...view, camera: action.camera };
+    case "frame":
+      return { ...view, ...action.frame };
+    case "zoom": {
+      const span = clampSpan(view.span * action.factor);
+      const anchor = { x: view.cursor.x + 0.5, y: view.cursor.y + 0.5 };
+      const camera = zoomAt(view.camera, view.span, anchor, span);
+      return { ...view, span, camera: follow(camera, span, view.cursor) };
+    }
   }
 }
 
@@ -91,33 +107,46 @@ interface Press {
   panning: boolean;
   clientX: number;
   clientY: number;
-  camera: Cell;
+  frame: Frame;
   /** 盤面を映している正方形の一辺（px） */
   size: number;
 }
 
-/** 画面上の位置を盤面の位置（マスの単位）にする。SVG は正方形を縦横の短いほうに合わせて中央に置く */
-function boardPoint(rect: DOMRect, camera: Cell, clientX: number, clientY: number): Cell | null {
-  const size = Math.min(rect.width, rect.height);
-  if (size === 0) return null;
-  const left = rect.left + (rect.width - size) / 2;
-  const top = rect.top + (rect.height - size) / 2;
-  return {
-    x: camera.x + ((clientX - left) * VIEW) / size,
-    y: camera.y + ((clientY - top) * VIEW) / size,
-  };
+interface Pinch {
+  distance: number;
+  /** 指の中点にあった盤面の位置。指の中点の下に置き続ける */
+  anchor: Cell;
+  span: number;
+  rect: DOMRect;
+}
+
+interface Point {
+  x: number;
+  y: number;
+}
+
+function twoPoints(pointers: Map<number, Point>): [Point, Point] | null {
+  const [a, b] = pointers.values();
+  return a && b ? [a, b] : null;
 }
 
 export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProps) {
+  const prefix = `mines-${useId().replace(/[^\w-]/g, "")}`;
   const [view, dispatch] = useReducer(reduce, seed, (initial) => ({
     game: createInfinite(initial),
     cursor: { x: 0, y: 0 },
-    camera: { x: -(VIEW - 1) / 2, y: -(VIEW - 1) / 2 },
+    camera: { x: -(START_SPAN - 1) / 2, y: -(START_SPAN - 1) / 2 },
+    span: START_SPAN,
   }));
   const [keyboard, setKeyboard] = useState(false);
-  const press = useRef<Press | null>(null);
   const [pressing, setPressing] = useState<Cell | null>(null);
-  const { game, cursor, camera } = view;
+  const svgRef = useRef<SVGSVGElement>(null);
+  const press = useRef<Press | null>(null);
+  const pointers = useRef(new Map<number, Point>());
+  const pinch = useRef<Pinch | null>(null);
+  const pending = useRef<Frame | null>(null);
+  const frameRequest = useRef<number | null>(null);
+  const { game, cursor, camera, span } = view;
   const over = game.phase === "lost";
 
   useGameLoop((dt) => dispatch({ type: "tick", dt }), !paused && game.phase === "playing");
@@ -159,6 +188,21 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
     return () => clearTimeout(timer);
   }, [paused, over]);
 
+  /** まだ描いていない動きも含めた、いまの範囲 */
+  const currentFrame = (): Frame => pending.current ?? { camera, span };
+
+  /** ドラッグ・ピンチ・ホイールで動かした範囲は、次のフレームでまとめて描く */
+  const scheduleFrame = (frame: Frame) => {
+    pending.current = frame;
+    if (frameRequest.current !== null) return;
+    frameRequest.current = requestAnimationFrame(() => {
+      frameRequest.current = null;
+      const next = pending.current;
+      pending.current = null;
+      if (next) dispatch({ type: "frame", frame: next });
+    });
+  };
+
   const flag = (cell?: Cell) => {
     const { x, y } = cell ?? cursor;
     if (over || game.revealed.has(cellKey(x, y))) return;
@@ -172,19 +216,54 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
     setPressing(null);
   };
 
+  const releasePointer = (pointer: number) => {
+    pointers.current.delete(pointer);
+    if (pointers.current.size < 2) pinch.current = null;
+  };
+
   useEffect(() => {
-    if (!paused || !press.current) return;
-    window.clearTimeout(press.current.timer);
+    if (!paused) return;
+    if (press.current) window.clearTimeout(press.current.timer);
     press.current = null;
+    pinch.current = null;
+    pointers.current.clear();
     setPressing(null);
   }, [paused]);
 
   useEffect(
     () => () => {
       if (press.current) window.clearTimeout(press.current.timer);
+      if (frameRequest.current !== null) cancelAnimationFrame(frameRequest.current);
     },
     [],
   );
+
+  const onWheel = useEffectEvent((event: WheelEvent) => {
+    const svg = svgRef.current;
+    if (paused || !svg) return;
+    event.preventDefault();
+    const base = currentFrame();
+    const anchor = boardPoint(
+      svg.getBoundingClientRect(),
+      base.camera,
+      base.span,
+      event.clientX,
+      event.clientY,
+    );
+    if (anchor === null) return;
+    const delta =
+      event.deltaMode === WheelEvent.DOM_DELTA_LINE ? event.deltaY * WHEEL_LINE : event.deltaY;
+    const next = clampSpan(base.span * Math.exp(delta * WHEEL_RATE));
+    scheduleFrame({ camera: zoomAt(base.camera, base.span, anchor, next), span: next });
+  });
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    // React の onWheel は passive で既定のスクロールを止められないので、直接受ける
+    const listener = (event: WheelEvent) => onWheel(event);
+    svg.addEventListener("wheel", listener, { passive: false });
+    return () => svg.removeEventListener("wheel", listener);
+  }, []);
 
   useGameKeys((event) => {
     const direction = directionFromKey(event.key);
@@ -203,13 +282,60 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
       flag();
       return true;
     }
+    if (event.key === "+" || event.key === "=") {
+      dispatch({ type: "zoom", factor: 1 / KEY_ZOOM });
+      return true;
+    }
+    if (event.key === "-") {
+      dispatch({ type: "zoom", factor: KEY_ZOOM });
+      return true;
+    }
     return undefined;
   }, !paused && !over);
+
+  const startPinch = (rect: DOMRect) => {
+    const points = twoPoints(pointers.current);
+    if (!points) return;
+    cancelPress();
+    const [a, b] = points;
+    const base = currentFrame();
+    const anchor = boardPoint(rect, base.camera, base.span, (a.x + b.x) / 2, (a.y + b.y) / 2);
+    const distance = Math.hypot(a.x - b.x, a.y - b.y);
+    pinch.current = anchor && distance > 0 ? { distance, anchor, span: base.span, rect } : null;
+  };
+
+  const movePinch = (current: Pinch) => {
+    const points = twoPoints(pointers.current);
+    if (!points) return;
+    const [a, b] = points;
+    const span = clampSpan((current.span * current.distance) / Math.hypot(a.x - b.x, a.y - b.y));
+    const { rect } = current;
+    const size = Math.min(rect.width, rect.height);
+    const left = rect.left + (rect.width - size) / 2;
+    const top = rect.top + (rect.height - size) / 2;
+    scheduleFrame({
+      camera: {
+        x: current.anchor.x - (((a.x + b.x) / 2 - left) * span) / size,
+        y: current.anchor.y - (((a.y + b.y) / 2 - top) * span) / size,
+      },
+      span,
+    });
+  };
 
   const onPointerDown = (event: PointerEvent<SVGSVGElement>) => {
     if (paused || over) return;
     const rect = event.currentTarget.getBoundingClientRect();
-    const point = boardPoint(rect, camera, event.clientX, event.clientY);
+    if (event.button === 0) {
+      event.currentTarget.setPointerCapture(event.pointerId);
+      pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (pointers.current.size >= 2) {
+        event.preventDefault();
+        if (pointers.current.size === 2) startPinch(rect);
+        return;
+      }
+    }
+    const base = currentFrame();
+    const point = boardPoint(rect, base.camera, base.span, event.clientX, event.clientY);
     if (point === null) return;
     event.preventDefault();
     const cell = { x: Math.floor(point.x), y: Math.floor(point.y) };
@@ -221,7 +347,6 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
     }
     if (event.button !== 0) return;
     cancelPress();
-    event.currentTarget.setPointerCapture(event.pointerId);
     const current: Press = {
       pointer: event.pointerId,
       cell,
@@ -230,7 +355,7 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
       panning: false,
       clientX: event.clientX,
       clientY: event.clientY,
-      camera,
+      frame: base,
       size: Math.min(rect.width, rect.height),
     };
     current.timer = window.setTimeout(() => {
@@ -243,6 +368,13 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
   };
 
   const onPointerMove = (event: PointerEvent<SVGSVGElement>) => {
+    if (pointers.current.has(event.pointerId)) {
+      pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    }
+    if (pinch.current) {
+      movePinch(pinch.current);
+      return;
+    }
     const current = press.current;
     if (!current || current.pointer !== event.pointerId) return;
     const dx = event.clientX - current.clientX;
@@ -253,16 +385,18 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
       current.panning = true;
       setPressing(null);
     }
-    dispatch({
-      type: "pan",
+    const { camera: from, span: across } = current.frame;
+    scheduleFrame({
       camera: {
-        x: current.camera.x - (dx * VIEW) / current.size,
-        y: current.camera.y - (dy * VIEW) / current.size,
+        x: from.x - (dx * across) / current.size,
+        y: from.y - (dy * across) / current.size,
       },
+      span: across,
     });
   };
 
   const onPointerUp = (event: PointerEvent<SVGSVGElement>) => {
+    releasePointer(event.pointerId);
     const current = press.current;
     if (!current || current.pointer !== event.pointerId) return;
     window.clearTimeout(current.timer);
@@ -273,16 +407,18 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
     }
   };
 
-  const cells: Cell[] = [];
-  for (let y = Math.floor(camera.y); y < camera.y + VIEW; y++) {
-    for (let x = Math.floor(camera.x); x < camera.x + VIEW; x++) cells.push({ x, y });
-  }
+  const onPointerCancel = (event: PointerEvent<SVGSVGElement>) => {
+    releasePointer(event.pointerId);
+    cancelPress();
+  };
+
   const left = camera.x * CELL;
   const top = camera.y * CELL;
-  const extent = VIEW * CELL;
+  const extent = span * CELL;
 
   return (
     <svg
+      ref={svgRef}
       className="game-svg"
       viewBox={`${left} ${top} ${extent} ${extent}`}
       role="img"
@@ -290,33 +426,22 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onPointerCancel={cancelPress}
+      onPointerCancel={onPointerCancel}
       onContextMenu={(event) => event.preventDefault()}
     >
-      <rect x={left} y={top} width={extent} height={extent} style={{ fill: "var(--bg)" }} />
-      {cells.map(({ x, y }) => {
-        const key = cellKey(x, y);
-        const count = game.revealed.get(key);
-        const flagged = game.flagged.has(key);
-        const mine = over && isMine(game, x, y);
-        const exploded = game.exploded?.x === x && game.exploded.y === y;
-        return (
-          <CellView
-            key={key}
-            x={x * CELL}
-            y={y * CELL}
-            open={count !== undefined}
-            count={count ?? 0}
-            flagged={flagged}
-            mine={mine && !flagged ? (exploded ? "exploded" : "shown") : "hidden"}
-            wrongFlag={over && flagged && !mine}
-            cursor={keyboard && !over && cursor.x === x && cursor.y === y}
-          />
-        );
-      })}
-      {pressing !== null && !over ? (
-        <PressRing x={pressing.x * CELL} y={pressing.y * CELL} />
-      ) : null}
+      <InfiniteBoard
+        prefix={prefix}
+        revealed={game.revealed}
+        flagged={game.flagged}
+        seed={game.seed}
+        start={game.start}
+        over={over}
+        exploded={game.exploded}
+        camera={camera}
+        span={span}
+        cursor={keyboard && !over ? cursor : null}
+        pressing={pressing}
+      />
     </svg>
   );
 }

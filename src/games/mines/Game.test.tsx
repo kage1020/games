@@ -50,6 +50,11 @@ describe("MinesGame", () => {
 
 describe("MinesGame infinite", () => {
   const viewBoxX = (svg: Element) => Number(svg.getAttribute("viewBox")?.split(" ")[0]);
+  const viewBoxWidth = (svg: Element) => Number(svg.getAttribute("viewBox")?.split(" ")[2]);
+  const nextFrame = () =>
+    act(() => {
+      vi.advanceTimersToNextFrame();
+    });
 
   afterEach(() => {
     vi.useRealTimers();
@@ -81,21 +86,101 @@ describe("MinesGame infinite", () => {
   });
 
   it("AC-G-mines-11 pans by dragging without opening a cell", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "requestAnimationFrame"] });
     const p = props();
     render(<MinesGame {...p} mode="infinite" />);
     const svg = screen.getByRole("img");
     svg.getBoundingClientRect = () => DOMRect.fromRect({ x: 0, y: 0, width: 550, height: 550 });
     svg.setPointerCapture = vi.fn();
-    svg.releasePointerCapture = vi.fn();
     const start = viewBoxX(svg);
     fireEvent.pointerDown(svg, { pointerId: 1, button: 0, clientX: 300, clientY: 300 });
+    fireEvent.pointerMove(svg, { pointerId: 1, clientX: 250, clientY: 300 });
     fireEvent.pointerMove(svg, { pointerId: 1, clientX: 200, clientY: 300 });
+    nextFrame();
     fireEvent.pointerUp(svg, { pointerId: 1, clientX: 200, clientY: 300 });
     expect(viewBoxX(svg)).toBe(start + 200);
     expect(p.onHud).toHaveBeenLastCalledWith([
       { label: "開いたマス", value: "0" },
       { label: "時間", value: "0:00.0" },
     ]);
+  });
+
+  it("AC-G-mines-14 zooms with + and - around the cursor within 6 to 40 cells", () => {
+    render(<MinesGame {...props()} mode="infinite" />);
+    const svg = screen.getByRole("img");
+    expect(viewBoxWidth(svg)).toBe(1100);
+    act(() => {
+      fireEvent.keyDown(window, { key: "+" });
+    });
+    expect(viewBoxWidth(svg)).toBeLessThan(1100);
+    act(() => {
+      for (let i = 0; i < 20; i++) fireEvent.keyDown(window, { key: "+" });
+    });
+    expect(viewBoxWidth(svg)).toBe(600);
+    act(() => {
+      for (let i = 0; i < 40; i++) fireEvent.keyDown(window, { key: "-" });
+    });
+    expect(viewBoxWidth(svg)).toBe(4000);
+    const [x = 0, , width = 0] = (svg.getAttribute("viewBox") ?? "").split(" ").map(Number);
+    expect(x + width / 2).toBeCloseTo(50);
+  });
+
+  it("AC-G-mines-14 zooms with the wheel around the pointed position", () => {
+    vi.useFakeTimers({ toFake: ["requestAnimationFrame"] });
+    render(<MinesGame {...props()} mode="infinite" />);
+    const svg = screen.getByRole("img");
+    svg.getBoundingClientRect = () => DOMRect.fromRect({ x: 0, y: 0, width: 550, height: 550 });
+    const pointed = () => {
+      const [x = 0, y = 0, width = 0] = (svg.getAttribute("viewBox") ?? "").split(" ").map(Number);
+      return { x: x + (width * 100) / 550, y: y + (width * 400) / 550 };
+    };
+    const before = pointed();
+    fireEvent.wheel(svg, { deltaY: 300, clientX: 100, clientY: 400 });
+    nextFrame();
+    expect(viewBoxWidth(svg)).toBeGreaterThan(1100);
+    expect(pointed().x).toBeCloseTo(before.x);
+    expect(pointed().y).toBeCloseTo(before.y);
+  });
+
+  it("AC-G-mines-14 pinches to zoom without opening or flagging", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "requestAnimationFrame"] });
+    const p = props();
+    const { container } = render(<MinesGame {...p} mode="infinite" />);
+    const svg = screen.getByRole("img");
+    svg.getBoundingClientRect = () => DOMRect.fromRect({ x: 0, y: 0, width: 550, height: 550 });
+    svg.setPointerCapture = vi.fn();
+    fireEvent.pointerDown(svg, { pointerId: 1, button: 0, clientX: 200, clientY: 275 });
+    fireEvent.pointerDown(svg, { pointerId: 2, button: 0, clientX: 350, clientY: 275 });
+    expect(container.querySelectorAll(".mines-press")).toHaveLength(0);
+    fireEvent.pointerMove(svg, { pointerId: 2, clientX: 450, clientY: 275 });
+    nextFrame();
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    fireEvent.pointerUp(svg, { pointerId: 2, clientX: 450, clientY: 275 });
+    fireEvent.pointerUp(svg, { pointerId: 1, clientX: 200, clientY: 275 });
+    expect(viewBoxWidth(svg)).toBeLessThan(1100);
+    expect(container.querySelectorAll(".mines-flag")).toHaveLength(0);
+    expect(p.onHud).toHaveBeenLastCalledWith([
+      { label: "開いたマス", value: "0" },
+      { label: "時間", value: "0:00.0" },
+    ]);
+  });
+
+  it("AC-G-mines-15 draws closed cells as one pattern however far it zooms out", () => {
+    const { container } = render(<MinesGame {...props()} mode="infinite" />);
+    const svg = screen.getByRole("img");
+    act(() => {
+      for (let i = 0; i < 40; i++) fireEvent.keyDown(window, { key: "-" });
+    });
+    expect(viewBoxWidth(svg)).toBe(4000);
+    expect(container.querySelectorAll("svg *").length).toBeLessThan(20);
+    act(() => {
+      fireEvent.keyDown(window, { key: " " });
+    });
+    const numbers = container.querySelectorAll("text").length;
+    expect(numbers).toBeGreaterThan(0);
+    expect(container.querySelectorAll("svg *").length).toBeLessThan(numbers + 20);
   });
 
   it("AC-G-mines-10 finishes on a mine with the opened count as the score", () => {
@@ -124,7 +209,7 @@ describe("MinesGame infinite", () => {
 });
 
 describe("MinesGame long press", () => {
-  const FLAG = 'path[d^="M40 24 L72"]';
+  const FLAG = ".mines-flag";
   const setup = () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const p = props();
