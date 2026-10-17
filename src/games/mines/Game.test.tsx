@@ -279,14 +279,20 @@ describe("MinesGame long press", () => {
   it("AC-G-mines-12 traces the press on the cell until it becomes a flag", () => {
     const { p, svg, container } = setup();
     fireEvent.pointerDown(svg, { pointerId: 1, button: 0, ...at(5, 5) });
+    act(() => {
+      vi.advanceTimersByTime(99);
+    });
     expect(container.querySelectorAll(".mines-press")).toHaveLength(0);
     act(() => {
-      vi.advanceTimersByTime(150);
+      vi.advanceTimersByTime(1);
     });
     expect(container.querySelectorAll(".mines-press")).toHaveLength(1);
+    act(() => {
+      vi.advanceTimersByTime(149);
+    });
     expect(container.querySelectorAll(FLAG)).toHaveLength(0);
     act(() => {
-      vi.advanceTimersByTime(150);
+      vi.advanceTimersByTime(1);
     });
     expect(container.querySelectorAll(".mines-press")).toHaveLength(0);
     expect(container.querySelectorAll(FLAG)).toHaveLength(1);
@@ -301,7 +307,7 @@ describe("MinesGame long press", () => {
     const { svg, container } = setup();
     fireEvent.pointerDown(svg, { pointerId: 1, button: 0, ...at(5, 5) });
     act(() => {
-      vi.advanceTimersByTime(100);
+      vi.advanceTimersByTime(99);
     });
     expect(container.querySelectorAll(".mines-press")).toHaveLength(0);
     fireEvent.pointerUp(svg, { pointerId: 1, ...at(5, 5) });

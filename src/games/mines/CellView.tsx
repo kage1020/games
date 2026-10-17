@@ -1,7 +1,7 @@
 export const CELL = 100;
-export const LONG_PRESS = 300;
+export const LONG_PRESS = 250;
 /** 長押しの円を出すまでの時間。すぐ離すタップやドラッグの始まりでは出さない */
-export const RING_DELAY = 150;
+export const RING_DELAY = 100;
 export const LOST_PAUSE = 1400;
 
 export function Flag() {
