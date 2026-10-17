@@ -4,7 +4,7 @@ import { DIRECTIONS, directionFromKey } from "@/sdk/grid.ts";
 import { svgPoint, useGameKeys, useGameLoop } from "@/sdk/hooks.ts";
 import { createRng } from "@/sdk/rng.ts";
 import type { GameProps } from "@/sdk/types.ts";
-import { CELL, CellView, LONG_PRESS, LOST_PAUSE } from "./CellView.tsx";
+import { CELL, CellView, LONG_PRESS, LOST_PAUSE, PressRing } from "./CellView.tsx";
 import { InfiniteMines } from "./InfiniteMines.tsx";
 import {
   adjacentMines,
@@ -51,6 +51,7 @@ function FiniteMines({ mode, seed, paused, sound, onHud, onFinish }: GameProps) 
   const [keyboard, setKeyboard] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
   const press = useRef<Press | null>(null);
+  const [pressing, setPressing] = useState<number | null>(null);
   const { cols, rows } = state;
   const over = state.phase === "won" || state.phase === "lost";
 
@@ -97,19 +98,22 @@ function FiniteMines({ mode, seed, paused, sound, onHud, onFinish }: GameProps) 
 
   const open = (cell: number) => setState((current) => reveal(current, cell, rng));
   const flag = (cell: number) => {
+    if (over || state.revealed[cell]) return;
     setState((current) => toggleFlag(current, cell));
-    sound.play("tap");
+    sound.play("flag");
   };
 
   const cancelPress = () => {
     if (press.current) window.clearTimeout(press.current.timer);
     press.current = null;
+    setPressing(null);
   };
 
   useEffect(() => {
     if (!paused || !press.current) return;
     window.clearTimeout(press.current.timer);
     press.current = null;
+    setPressing(null);
   }, [paused]);
 
   useEffect(
@@ -170,9 +174,11 @@ function FiniteMines({ mode, seed, paused, sound, onHud, onFinish }: GameProps) 
     const current: Press = { pointer: event.pointerId, cell, timer: 0, flagged: false };
     current.timer = window.setTimeout(() => {
       current.flagged = true;
+      setPressing(null);
       flag(cell);
     }, LONG_PRESS);
     press.current = current;
+    if (!state.revealed[cell]) setPressing(cell);
   };
 
   const onPointerUp = (event: PointerEvent<SVGSVGElement>) => {
@@ -180,6 +186,7 @@ function FiniteMines({ mode, seed, paused, sound, onHud, onFinish }: GameProps) 
     if (!current || current.pointer !== event.pointerId) return;
     window.clearTimeout(current.timer);
     press.current = null;
+    setPressing(null);
     if (!current.flagged && !paused) open(current.cell);
   };
 
@@ -231,6 +238,9 @@ function FiniteMines({ mode, seed, paused, sound, onHud, onFinish }: GameProps) 
           />
         );
       })}
+      {pressing !== null && !over ? (
+        <PressRing x={(pressing % cols) * CELL} y={Math.floor(pressing / cols) * CELL} />
+      ) : null}
     </svg>
   );
 }

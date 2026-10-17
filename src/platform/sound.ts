@@ -9,10 +9,16 @@ interface Tone {
 
 const TONES: Record<SoundName, Tone> = {
   tap: { frequencies: [660], length: 0.05, type: "triangle" },
+  flag: { frequencies: [990], length: 0.04, type: "sine" },
   good: { frequencies: [660, 880], length: 0.07, type: "triangle" },
   bad: { frequencies: [220, 165], length: 0.1, type: "square" },
   clear: { frequencies: [523, 659, 784], length: 0.09, type: "triangle" },
   over: { frequencies: [392, 330, 262], length: 0.12, type: "triangle" },
+};
+
+/** 対応する端末で音と一緒に出す振動（ミリ秒） */
+const VIBRATIONS: Partial<Record<SoundName, number>> = {
+  flag: 15,
 };
 
 let context: AudioContext | null = null;
@@ -24,12 +30,14 @@ function audio(): AudioContext | null {
   return context;
 }
 
-/** 小さな合図の音。volume は 0〜1 */
+/** 小さな合図の音と、対応する端末では短い振動。volume は 0〜1 で、0 なら振動もしない */
 export function createSound(volume: () => number): Sound {
   return {
     play(name) {
       const level = volume();
       if (level <= 0) return;
+      const vibration = VIBRATIONS[name];
+      if (vibration !== undefined && "vibrate" in navigator) navigator.vibrate(vibration);
       const ctx = audio();
       if (!ctx) return;
       const tone = TONES[name];

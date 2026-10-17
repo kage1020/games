@@ -3,7 +3,7 @@ import { formatDuration, formatNumber } from "@/platform/format.ts";
 import { DIRECTIONS, directionFromKey } from "@/sdk/grid.ts";
 import { useGameKeys, useGameLoop } from "@/sdk/hooks.ts";
 import type { GameProps } from "@/sdk/types.ts";
-import { CELL, CellView, LONG_PRESS, LOST_PAUSE } from "./CellView.tsx";
+import { CELL, CellView, LONG_PRESS, LOST_PAUSE, PressRing } from "./CellView.tsx";
 import {
   type Cell,
   cellKey,
@@ -116,6 +116,7 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
   }));
   const [keyboard, setKeyboard] = useState(false);
   const press = useRef<Press | null>(null);
+  const [pressing, setPressing] = useState<Cell | null>(null);
   const { game, cursor, camera } = view;
   const over = game.phase === "lost";
 
@@ -159,19 +160,23 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
   }, [paused, over]);
 
   const flag = (cell?: Cell) => {
+    const { x, y } = cell ?? cursor;
+    if (over || game.revealed.has(cellKey(x, y))) return;
     dispatch({ type: "flag", cell });
-    sound.play("tap");
+    sound.play("flag");
   };
 
   const cancelPress = () => {
     if (press.current) window.clearTimeout(press.current.timer);
     press.current = null;
+    setPressing(null);
   };
 
   useEffect(() => {
     if (!paused || !press.current) return;
     window.clearTimeout(press.current.timer);
     press.current = null;
+    setPressing(null);
   }, [paused]);
 
   useEffect(
@@ -230,9 +235,11 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
     };
     current.timer = window.setTimeout(() => {
       current.flagged = true;
+      setPressing(null);
       flag(cell);
     }, LONG_PRESS);
     press.current = current;
+    if (!game.revealed.has(cellKey(cell.x, cell.y))) setPressing(cell);
   };
 
   const onPointerMove = (event: PointerEvent<SVGSVGElement>) => {
@@ -244,6 +251,7 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
       if (Math.hypot(dx, dy) < PAN_THRESHOLD) return;
       window.clearTimeout(current.timer);
       current.panning = true;
+      setPressing(null);
     }
     dispatch({
       type: "pan",
@@ -259,6 +267,7 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
     if (!current || current.pointer !== event.pointerId) return;
     window.clearTimeout(current.timer);
     press.current = null;
+    setPressing(null);
     if (!current.flagged && !current.panning && !paused) {
       dispatch({ type: "open", cell: current.cell });
     }
@@ -305,6 +314,9 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
           />
         );
       })}
+      {pressing !== null && !over ? (
+        <PressRing x={pressing.x * CELL} y={pressing.y * CELL} />
+      ) : null}
     </svg>
   );
 }

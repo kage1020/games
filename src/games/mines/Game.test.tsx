@@ -122,3 +122,81 @@ describe("MinesGame infinite", () => {
     expect(p.onFinish.mock.calls[0]?.[0]).toMatchObject({ score: opened });
   });
 });
+
+describe("MinesGame long press", () => {
+  const FLAG = 'path[d^="M40 24 L72"]';
+  const setup = () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const p = props();
+    const view = render(<MinesGame {...p} mode="infinite" />);
+    const svg = screen.getByRole("img");
+    svg.getBoundingClientRect = () => DOMRect.fromRect({ x: 0, y: 0, width: 550, height: 550 });
+    svg.setPointerCapture = vi.fn();
+    return { p, svg, container: view.container };
+  };
+  /** 画面の 11×11 マスのうち、左上から (column, row) 番目のマスの中央 */
+  const at = (column: number, row: number) => ({
+    clientX: column * 50 + 25,
+    clientY: row * 50 + 25,
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("AC-G-mines-12 traces the press on the cell until it becomes a flag", () => {
+    const { p, svg, container } = setup();
+    fireEvent.pointerDown(svg, { pointerId: 1, button: 0, ...at(5, 5) });
+    expect(container.querySelectorAll(".mines-press")).toHaveLength(1);
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    expect(container.querySelectorAll(".mines-press")).toHaveLength(0);
+    expect(container.querySelectorAll(FLAG)).toHaveLength(1);
+    fireEvent.pointerUp(svg, { pointerId: 1, ...at(5, 5) });
+    expect(p.onHud).toHaveBeenLastCalledWith([
+      { label: "開いたマス", value: "0" },
+      { label: "時間", value: "0:00.0" },
+    ]);
+  });
+
+  it("AC-G-mines-12 clears the trace when released early or dragged", () => {
+    const { svg, container } = setup();
+    fireEvent.pointerDown(svg, { pointerId: 1, button: 0, ...at(5, 5) });
+    fireEvent.pointerUp(svg, { pointerId: 1, ...at(5, 5) });
+    expect(container.querySelectorAll(".mines-press")).toHaveLength(0);
+
+    fireEvent.pointerDown(svg, { pointerId: 1, button: 0, ...at(1, 1) });
+    expect(container.querySelectorAll(".mines-press")).toHaveLength(1);
+    fireEvent.pointerMove(svg, { pointerId: 1, clientX: 120, clientY: 75 });
+    expect(container.querySelectorAll(".mines-press")).toHaveLength(0);
+  });
+
+  it("AC-G-mines-13 plays the flag sound for flags and stays quiet on an opened cell", () => {
+    const { p, svg, container } = setup();
+    act(() => {
+      fireEvent.keyDown(window, { key: " " });
+    });
+    const board = reveal(createInfinite(p.seed), 0, 0);
+    const closed = Array.from({ length: 121 }, (_, i) => ({
+      column: i % 11,
+      row: Math.floor(i / 11),
+    })).find(({ column, row }) => !board.revealed.has(`${column - 5},${row - 5}`));
+    if (!closed) throw new Error("画面に閉じたマスがない");
+    fireEvent.pointerDown(svg, { pointerId: 1, button: 2, ...at(closed.column, closed.row) });
+    expect(p.sound.play).toHaveBeenLastCalledWith("flag");
+    expect(container.querySelectorAll(FLAG)).toHaveLength(1);
+
+    p.sound.play.mockClear();
+    fireEvent.pointerDown(svg, { pointerId: 1, button: 0, ...at(5, 5) });
+    expect(container.querySelectorAll(".mines-press")).toHaveLength(0);
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    fireEvent.pointerUp(svg, { pointerId: 1, ...at(5, 5) });
+    act(() => {
+      fireEvent.keyDown(window, { key: "f" });
+    });
+    expect(p.sound.play).not.toHaveBeenCalledWith("flag");
+  });
+});

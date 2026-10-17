@@ -87,3 +87,30 @@ export function CellView({ x, y, open, count, flagged, mine, wrongFlag, cursor }
     </g>
   );
 }
+
+/**
+ * 長押しで旗になるまでの進み具合。指で隠れないよう、押したマスより大きな円で囲み、
+ * ほかのマスより後に描いて上に重ねる。x と y は押したマスの左上（viewBox の単位）
+ */
+export function PressRing({ x, y }: { x: number; y: number }) {
+  const cx = x + CELL / 2;
+  const cy = y + CELL / 2;
+  return (
+    <circle
+      className="mines-press"
+      cx={cx}
+      cy={cy}
+      r={CELL * 1.25}
+      pathLength={100}
+      transform={`rotate(-90 ${cx} ${cy})`}
+      style={{
+        fill: "none",
+        stroke: "var(--accent)",
+        strokeWidth: 10,
+        strokeLinecap: "round",
+        animationDuration: `${LONG_PRESS}ms`,
+        pointerEvents: "none",
+      }}
+    />
+  );
+}

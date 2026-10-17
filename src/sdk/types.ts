@@ -1,7 +1,7 @@
 import type { GameId } from "@shared/catalog.ts";
 import type { ComponentType } from "react";
 
-export type SoundName = "tap" | "good" | "bad" | "clear" | "over";
+export type SoundName = "tap" | "flag" | "good" | "bad" | "clear" | "over";
 
 export interface Sound {
   play(name: SoundName): void;

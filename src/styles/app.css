@@ -309,6 +309,27 @@ a {
   user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+/* マインスイーパーの長押し：旗になるまでの進み具合を円で描く。長さは要素の animation-duration */
+.mines-press {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: mines-press linear forwards;
+}
+
+@keyframes mines-press {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mines-press {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
 }
 
 /* Segmented：中身はネイティブの radio。選択中の見た目は bundle.css の aria-checked と同じ */
