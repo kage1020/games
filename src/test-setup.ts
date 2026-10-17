@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
+import { dismissNotice } from "./platform/notices.tsx";
 
 export const mediaMatches = new Map<string, boolean>();
 
@@ -23,4 +24,5 @@ afterEach(() => {
   cleanup();
   mediaMatches.clear();
   localStorage.clear();
+  dismissNotice();
 });

@@ -1,5 +1,5 @@
 import type { GameId } from "@shared/catalog.ts";
-import type { ComponentType, LazyExoticComponent } from "react";
+import type { ComponentType } from "react";
 
 export type SoundName = "tap" | "good" | "bad" | "clear" | "over";
 
@@ -67,5 +67,6 @@ export interface GameDefinition {
   formatDelta?(diff: number): { value: number; unit?: string };
   controls: ControlHint[];
   Thumb: ComponentType;
-  Game: LazyExoticComponent<ComponentType<GameProps>>;
+  /** 遊ぶときに読み込むよう、ふつうは React.lazy で包む */
+  Game: ComponentType<GameProps>;
 }

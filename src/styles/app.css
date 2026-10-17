@@ -1,0 +1,456 @@
+/* アプリ側に置くのは配置だけ。色・角丸・影・フォントはデザインシステムのトークンを使う */
+
+:root {
+  --header-height: 49px;
+  --page-gutter: var(--space-12);
+}
+
+@media (max-width: 640px) {
+  :root {
+    --header-height: 57px;
+    --page-gutter: var(--space-4);
+  }
+}
+
+html {
+  background: var(--bg);
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+body {
+  min-height: 100dvh;
+}
+
+a {
+  color: var(--link);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.page {
+  box-sizing: border-box;
+  padding: var(--space-6) var(--page-gutter) var(--space-12);
+}
+
+.page.narrow {
+  max-width: calc(40em + var(--page-gutter) * 2);
+  margin: 0 auto;
+}
+
+/* ---------- 帯 ---------- */
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  height: var(--header-height);
+  box-sizing: border-box;
+  padding: 0 calc(var(--page-gutter) - var(--space-2)) 0 var(--page-gutter);
+  border-bottom: 1px solid var(--line);
+}
+
+.site-name {
+  display: inline-flex;
+  align-items: baseline;
+  color: var(--ink);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+}
+
+.site-domain {
+  color: var(--ink-muted);
+}
+
+.site-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.site-appbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-hud);
+}
+
+/* ---------- 一覧 ---------- */
+.home-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.home-lead h1 {
+  margin: 0;
+}
+
+.home-desc {
+  margin: var(--space-1) 0 0;
+  color: var(--ink-muted);
+}
+
+.home-gallery {
+  margin-top: var(--space-8);
+}
+
+ul.kg-gallery {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* ---------- ゲーム ---------- */
+.play {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--space-8);
+  padding-top: var(--space-4);
+  padding-bottom: var(--space-6);
+}
+
+.play-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  height: calc(100dvh - var(--header-height) - var(--space-4) - var(--space-6));
+  min-height: 480px;
+  position: sticky;
+  top: var(--space-4);
+}
+
+/* 広い画面：Stage は列の高さいっぱいに広がり、画面は縦横比を保ったまま収まる */
+.play-stage {
+  flex: 1;
+  min-height: 0;
+}
+
+.play-stage .kg-stage-well {
+  container-type: size;
+  min-height: 0;
+}
+
+.play-stage .kg-stage-screen {
+  width: min(100cqw, 100cqh * var(--ratio));
+}
+
+.play-stage:fullscreen .kg-stage-well {
+  flex: 1;
+}
+
+.play-screen {
+  position: absolute;
+  inset: 0;
+}
+
+.play-screen:focus {
+  outline: none;
+}
+
+.play-panel {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  box-sizing: border-box;
+  text-align: center;
+  background: var(--bg);
+}
+
+.play-panel .title,
+.play-panel p {
+  margin: 0;
+}
+
+.play-panel-text {
+  color: var(--ink-muted);
+}
+
+.play-result {
+  align-items: stretch;
+  text-align: left;
+}
+
+.play-result .kg-result {
+  width: min(100%, 480px);
+  margin: auto;
+}
+
+.play-loading {
+  position: absolute;
+  inset: var(--space-4);
+}
+
+.play-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.play-aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.play-intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.play-intro h1,
+.play-intro p {
+  margin: 0;
+}
+
+.play-desc,
+.play-meta {
+  color: var(--ink-muted);
+}
+
+.play-toggles {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.play-mode {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.play-stats {
+  display: flex;
+  gap: var(--space-8);
+}
+
+.play-ranking .kg-sh {
+  height: auto;
+  min-height: var(--control-height-sm);
+  padding-bottom: var(--space-1);
+  align-items: center;
+}
+
+.ranking-message {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-4) 0;
+}
+
+.ranking-name {
+  margin: var(--space-2) 0 0;
+  color: var(--ink-muted);
+}
+
+.ranking-name .kg-btn-link {
+  font-size: inherit;
+  margin-left: var(--space-1);
+}
+
+.recent-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.recent-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.recent-when {
+  color: var(--ink-muted);
+}
+
+.recent-score {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+}
+
+/* ゲームの描画面。SDK の約束：SVG に game-svg を付ける */
+.game-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Segmented：中身はネイティブの radio。選択中の見た目は bundle.css の aria-checked と同じ */
+.kg-seg-input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  pointer-events: none;
+}
+
+.kg-seg-item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.kg-seg-item:has(> .kg-seg-input:checked) {
+  background: var(--primary);
+  color: var(--on-primary);
+  font-weight: 500;
+}
+
+.kg-seg-item:has(> .kg-seg-input:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* ---------- 記録と設定 ---------- */
+.settings h1 {
+  margin: 0 0 var(--space-8);
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+.settings-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.settings-text {
+  margin: 0;
+  color: var(--ink-muted);
+}
+
+.transfer-code {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.transfer-value {
+  overflow-wrap: anywhere;
+}
+
+.transfer-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.transfer-form {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.transfer-form .kg-field {
+  flex: 1 1 18em;
+}
+
+/* ---------- 知らせ ---------- */
+.notice-area {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(560px, calc(100% - var(--space-4) * 2));
+  z-index: var(--z-menu);
+}
+
+/* ---------- 狭い画面 ---------- */
+@media (max-width: 900px) {
+  .play {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .play-main {
+    height: auto;
+    min-height: 0;
+    position: static;
+  }
+
+  .play-stage .kg-stage-well {
+    container-type: normal;
+  }
+
+  .play-stage .kg-stage-screen {
+    width: 100%;
+  }
+
+  .play-stage .kg-stage-hud {
+    gap: var(--space-4);
+  }
+}
+
+@media (max-width: 640px) {
+  .play {
+    padding-top: var(--space-3);
+  }
+
+  .play-crumb {
+    display: none;
+  }
+
+  .play-stage .kg-stage-title {
+    display: none;
+  }
+
+  .play-stage .kg-stage-well {
+    padding: var(--space-2);
+  }
+
+  .play-stage .kg-stage-foot {
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+  }
+
+  /* はじめる前と結果は、画面の縦横比より背が高ければ画面ごと伸ばす */
+  .play-stage .kg-stage-screen:has(> .play-screen > .play-panel) {
+    overflow: visible;
+  }
+
+  .play-screen:has(> .play-panel) {
+    position: static;
+  }
+
+  .play-panel {
+    position: static;
+    min-height: 100%;
+  }
+
+  .display {
+    font-size: 26px;
+  }
+}

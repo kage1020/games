@@ -128,9 +128,12 @@ export function AppBar({
   backHref,
   backLabel = "戻る",
   leading,
+  titleAs: Title = "h1",
   className,
 }: {
   title: ReactNode;
+  /** 画面に別の h1 があるときは div にする */
+  titleAs?: "h1" | "div";
   subtitle?: ReactNode;
   actions?: AppBarAction[];
   onBack?: () => void;
@@ -158,10 +161,10 @@ export function AppBar({
         </button>
       ) : null}
       {leading}
-      <h1 className="kg-appbar-title">
+      <Title className="kg-appbar-title">
         {title}
         {subtitle ? <span className="kg-appbar-sub">{subtitle}</span> : null}
-      </h1>
+      </Title>
       <div className="kg-appbar-actions">
         {actions.slice(0, 3).map((action) =>
           action.href ? (
