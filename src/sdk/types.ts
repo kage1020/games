@@ -14,7 +14,7 @@ export interface HudItem {
 }
 
 export interface GameResult {
-  /** null は記録の残らない終わり（地雷を踏んだなど） */
+  /** null は記録の残らない終わり（マインスイーパーの初級・中級で地雷を踏んだなど） */
   score: number | null;
   stats?: HudItem[];
   note?: string;

@@ -4,6 +4,8 @@ import { DIRECTIONS, directionFromKey } from "@/sdk/grid.ts";
 import { svgPoint, useGameKeys, useGameLoop } from "@/sdk/hooks.ts";
 import { createRng } from "@/sdk/rng.ts";
 import type { GameProps } from "@/sdk/types.ts";
+import { CELL, CellView, LONG_PRESS, LOST_PAUSE } from "./CellView.tsx";
+import { InfiniteMines } from "./InfiniteMines.tsx";
 import {
   adjacentMines,
   createMines,
@@ -15,11 +17,8 @@ import {
   toggleFlag,
 } from "./logic.ts";
 
-const CELL = 100;
 const MARGIN = 10;
-const LONG_PRESS = 300;
 const WON_PAUSE = 700;
-const LOST_PAUSE = 1400;
 
 function describe(state: MinesState): string {
   switch (state.phase) {
@@ -34,18 +33,6 @@ function describe(state: MinesState): string {
   }
 }
 
-function Flag() {
-  return (
-    <g>
-      <path d="M40 24 L72 37 L40 50 Z" style={{ fill: "var(--ink)" }} />
-      <path
-        d="M40 24 V76 M28 76 H56"
-        style={{ fill: "none", stroke: "var(--ink)", strokeWidth: 6, strokeLinecap: "round" }}
-      />
-    </g>
-  );
-}
-
 interface Press {
   pointer: number;
   cell: number;
@@ -53,7 +40,11 @@ interface Press {
   flagged: boolean;
 }
 
-export default function MinesGame({ mode, seed, paused, sound, onHud, onFinish }: GameProps) {
+export default function MinesGame(props: GameProps) {
+  return props.mode === "infinite" ? <InfiniteMines {...props} /> : <FiniteMines {...props} />;
+}
+
+function FiniteMines({ mode, seed, paused, sound, onHud, onFinish }: GameProps) {
   const [rng] = useState(() => createRng(seed));
   const [state, setState] = useState(() => createMines(isMinesMode(mode) ? mode : "easy"));
   const [cursor, setCursor] = useState(0);
@@ -223,64 +214,21 @@ export default function MinesGame({ mode, seed, paused, sound, onHud, onFinish }
       {cells.map(({ cell, x, y, open: isOpen }) => {
         const mine = state.mines?.[cell] === true;
         const flagged = state.flagged[cell] === true;
-        const count = isOpen ? adjacentMines(state, cell) : 0;
-        const showMine = state.phase === "lost" && mine && !flagged;
-        const wrongFlag = state.phase === "lost" && flagged && !mine;
+        const lost = state.phase === "lost";
         return (
-          <g key={`cell-${x}-${y}`} transform={`translate(${x} ${y})`}>
-            {isOpen ? (
-              count > 0 ? (
-                <text
-                  x={CELL / 2}
-                  y={CELL / 2}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  style={{ fill: "var(--ink)", font: "600 44px var(--font-mono)" }}
-                >
-                  {count}
-                </text>
-              ) : (
-                <circle cx={CELL / 2} cy={CELL / 2} r={3} style={{ fill: "var(--border)" }} />
-              )
-            ) : showMine ? (
-              <circle
-                cx={CELL / 2}
-                cy={CELL / 2}
-                r={cell === state.exploded ? 26 : 20}
-                style={{ fill: cell === state.exploded ? "var(--danger)" : "var(--ink)" }}
-              />
-            ) : (
-              <>
-                <rect
-                  x={4}
-                  y={4}
-                  width={CELL - 8}
-                  height={CELL - 8}
-                  rx={6}
-                  style={{ fill: "var(--fill)", stroke: "var(--line)", strokeWidth: 1 }}
-                  vectorEffect="non-scaling-stroke"
-                />
-                {flagged ? <Flag /> : null}
-                {wrongFlag ? (
-                  <path
-                    d="M20 20 L80 80 M80 20 L20 80"
-                    style={{ stroke: "var(--ink)", strokeWidth: 5, strokeLinecap: "round" }}
-                  />
-                ) : null}
-              </>
-            )}
-            {keyboard && cell === cursor && !over ? (
-              <rect
-                x={2}
-                y={2}
-                width={CELL - 4}
-                height={CELL - 4}
-                rx={8}
-                style={{ fill: "none", stroke: "var(--focus)", strokeWidth: 2 }}
-                vectorEffect="non-scaling-stroke"
-              />
-            ) : null}
-          </g>
+          <CellView
+            key={`cell-${x}-${y}`}
+            x={x}
+            y={y}
+            open={isOpen}
+            count={isOpen ? adjacentMines(state, cell) : 0}
+            flagged={flagged}
+            mine={
+              lost && mine && !flagged ? (cell === state.exploded ? "exploded" : "shown") : "hidden"
+            }
+            wrongFlag={lost && flagged && !mine}
+            cursor={keyboard && cell === cursor && !over}
+          />
         );
       })}
     </svg>

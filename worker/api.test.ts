@@ -221,6 +221,39 @@ describe("GET /api/rankings", () => {
     expect(rows.map((r) => r.score)).toEqual([180, 250, 320]);
   });
 
+  it("AC-W4 orders each mode by its own rule", async () => {
+    for (const [mode, score] of [
+      ["easy", 30_000],
+      ["easy", 20_000],
+      ["infinite", 120],
+      ["infinite", 480],
+    ] as const) {
+      await app.call("POST", "/api/scores", {
+        code: generateCode(),
+        body: { game: "mines", mode, score },
+      });
+    }
+    const easy = await app.call("GET", "/api/rankings?game=mines&mode=easy&period=all");
+    const infinite = await app.call("GET", "/api/rankings?game=mines&mode=infinite&period=all");
+    const scores = (json: Record<string, unknown>) =>
+      (json.rows as { score: number }[]).map((row) => row.score);
+    expect(scores(easy.json)).toEqual([20_000, 30_000]);
+    expect(scores(infinite.json)).toEqual([480, 120]);
+  });
+
+  it("AC-W9 returns the best of a descending mode as its highest score", async () => {
+    const me = generateCode();
+    for (const score of [120, 480, 300]) {
+      app.advance(3_000);
+      await app.call("POST", "/api/scores", {
+        code: me,
+        body: { game: "mines", mode: "infinite", score },
+      });
+    }
+    const response = await app.call("GET", "/api/me", { code: me });
+    expect(response.json.bests).toEqual([{ game: "mines", mode: "infinite", best: 480, plays: 3 }]);
+  });
+
   it("AC-W5 limits rows and marks the caller", async () => {
     const me = generateCode();
     for (let i = 0; i < 12; i++) await app.submit(generateCode(), 10 + 2 * i);
