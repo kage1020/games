@@ -4,7 +4,7 @@ import { DIRECTIONS, directionFromKey } from "@/sdk/grid.ts";
 import { svgPoint, useGameKeys, useGameLoop } from "@/sdk/hooks.ts";
 import { createRng } from "@/sdk/rng.ts";
 import type { GameProps } from "@/sdk/types.ts";
-import { CELL, CellView, LONG_PRESS, LOST_PAUSE, PressRing } from "./CellView.tsx";
+import { CELL, CellView, LONG_PRESS, LOST_PAUSE, PressRing, RING_DELAY } from "./CellView.tsx";
 import { InfiniteMines } from "./InfiniteMines.tsx";
 import {
   adjacentMines,
@@ -36,6 +36,7 @@ function describe(state: MinesState): string {
 interface Press {
   pointer: number;
   cell: number;
+  /** 円を出すまでの待ち、そのあとは旗になるまでの待ち。同時に 1 つしか走らない */
   timer: number;
   flagged: boolean;
 }
@@ -173,12 +174,14 @@ function FiniteMines({ mode, seed, paused, sound, onHud, onFinish }: GameProps) 
     cancelPress();
     const current: Press = { pointer: event.pointerId, cell, timer: 0, flagged: false };
     current.timer = window.setTimeout(() => {
-      current.flagged = true;
-      setPressing(null);
-      flag(cell);
-    }, LONG_PRESS);
+      if (!state.revealed[cell]) setPressing(cell);
+      current.timer = window.setTimeout(() => {
+        current.flagged = true;
+        setPressing(null);
+        flag(cell);
+      }, LONG_PRESS - RING_DELAY);
+    }, RING_DELAY);
     press.current = current;
-    if (!state.revealed[cell]) setPressing(cell);
   };
 
   const onPointerUp = (event: PointerEvent<SVGSVGElement>) => {

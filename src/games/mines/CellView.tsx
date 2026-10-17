@@ -1,5 +1,7 @@
 export const CELL = 100;
 export const LONG_PRESS = 300;
+/** 長押しの円を出すまでの時間。すぐ離すタップやドラッグの始まりでは出さない */
+export const RING_DELAY = 150;
 export const LOST_PAUSE = 1400;
 
 export function Flag() {
@@ -89,7 +91,7 @@ export function CellView({ x, y, open, count, flagged, mine, wrongFlag, cursor }
 }
 
 /**
- * 長押しで旗になるまでの進み具合。指で隠れないよう、押したマスより大きな円で囲み、
+ * 長押しで旗になるまでの進み具合。RING_DELAY のあとに、押した時点から数えた位置から描き始める。指で隠れないよう、押したマスより大きな円で囲み、
  * ほかのマスより後に描いて上に重ねる。x と y は押したマスの左上（viewBox の単位）
  */
 export function PressRing({ x, y }: { x: number; y: number }) {
@@ -109,6 +111,8 @@ export function PressRing({ x, y }: { x: number; y: number }) {
         strokeWidth: 10,
         strokeLinecap: "round",
         animationDuration: `${LONG_PRESS}ms`,
+        // 押した時点から数えた進み具合で出す
+        animationDelay: `${-RING_DELAY}ms`,
         pointerEvents: "none",
       }}
     />

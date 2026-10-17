@@ -11,7 +11,7 @@ import { formatDuration, formatNumber } from "@/platform/format.ts";
 import { DIRECTIONS, directionFromKey } from "@/sdk/grid.ts";
 import { useGameKeys, useGameLoop } from "@/sdk/hooks.ts";
 import type { GameProps } from "@/sdk/types.ts";
-import { CELL, LONG_PRESS, LOST_PAUSE } from "./CellView.tsx";
+import { CELL, LONG_PRESS, LOST_PAUSE, RING_DELAY } from "./CellView.tsx";
 import { InfiniteBoard } from "./InfiniteBoard.tsx";
 import {
   type Cell,
@@ -102,6 +102,7 @@ function describe(game: InfiniteState): string {
 interface Press {
   pointer: number;
   cell: Cell;
+  /** 円を出すまでの待ち、そのあとは旗になるまでの待ち。同時に 1 つしか走らない */
   timer: number;
   flagged: boolean;
   panning: boolean;
@@ -359,12 +360,14 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
       size: Math.min(rect.width, rect.height),
     };
     current.timer = window.setTimeout(() => {
-      current.flagged = true;
-      setPressing(null);
-      flag(cell);
-    }, LONG_PRESS);
+      if (!game.revealed.has(cellKey(cell.x, cell.y))) setPressing(cell);
+      current.timer = window.setTimeout(() => {
+        current.flagged = true;
+        setPressing(null);
+        flag(cell);
+      }, LONG_PRESS - RING_DELAY);
+    }, RING_DELAY);
     press.current = current;
-    if (!game.revealed.has(cellKey(cell.x, cell.y))) setPressing(cell);
   };
 
   const onPointerMove = (event: PointerEvent<SVGSVGElement>) => {

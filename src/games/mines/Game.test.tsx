@@ -232,9 +232,14 @@ describe("MinesGame long press", () => {
   it("AC-G-mines-12 traces the press on the cell until it becomes a flag", () => {
     const { p, svg, container } = setup();
     fireEvent.pointerDown(svg, { pointerId: 1, button: 0, ...at(5, 5) });
-    expect(container.querySelectorAll(".mines-press")).toHaveLength(1);
+    expect(container.querySelectorAll(".mines-press")).toHaveLength(0);
     act(() => {
-      vi.advanceTimersByTime(300);
+      vi.advanceTimersByTime(150);
+    });
+    expect(container.querySelectorAll(".mines-press")).toHaveLength(1);
+    expect(container.querySelectorAll(FLAG)).toHaveLength(0);
+    act(() => {
+      vi.advanceTimersByTime(150);
     });
     expect(container.querySelectorAll(".mines-press")).toHaveLength(0);
     expect(container.querySelectorAll(FLAG)).toHaveLength(1);
@@ -245,13 +250,38 @@ describe("MinesGame long press", () => {
     ]);
   });
 
-  it("AC-G-mines-12 clears the trace when released early or dragged", () => {
+  it("AC-G-mines-12 shows no trace for a quick tap or the start of a drag", () => {
     const { svg, container } = setup();
     fireEvent.pointerDown(svg, { pointerId: 1, button: 0, ...at(5, 5) });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(container.querySelectorAll(".mines-press")).toHaveLength(0);
     fireEvent.pointerUp(svg, { pointerId: 1, ...at(5, 5) });
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
     expect(container.querySelectorAll(".mines-press")).toHaveLength(0);
 
     fireEvent.pointerDown(svg, { pointerId: 1, button: 0, ...at(1, 1) });
+    act(() => {
+      vi.advanceTimersByTime(60);
+    });
+    expect(container.querySelectorAll(".mines-press")).toHaveLength(0);
+    fireEvent.pointerMove(svg, { pointerId: 1, clientX: 120, clientY: 75 });
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    expect(container.querySelectorAll(".mines-press")).toHaveLength(0);
+    expect(container.querySelectorAll(FLAG)).toHaveLength(0);
+  });
+
+  it("AC-G-mines-12 clears the trace when the press turns into a drag", () => {
+    const { svg, container } = setup();
+    fireEvent.pointerDown(svg, { pointerId: 1, button: 0, ...at(1, 1) });
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
     expect(container.querySelectorAll(".mines-press")).toHaveLength(1);
     fireEvent.pointerMove(svg, { pointerId: 1, clientX: 120, clientY: 75 });
     expect(container.querySelectorAll(".mines-press")).toHaveLength(0);
