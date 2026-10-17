@@ -1,5 +1,5 @@
 import type { PlayerBest, RankingEntry, RankPosition } from "@shared/api.ts";
-import { CATALOG, type GameId, type ScoreOrder } from "@shared/catalog.ts";
+import { type GameId, type ScoreOrder, scoreOrder, scoreRule } from "@shared/catalog.ts";
 
 /** D1Database のうち、ここで使う形だけ */
 export interface DbStatement {
@@ -117,7 +117,7 @@ export async function insertScore(
 export async function playerBest(db: Db, key: string, game: GameId, mode: string): Promise<number> {
   const row = await db
     .prepare(
-      `SELECT ${aggregate(CATALOG[game].order)}(score) AS best FROM scores WHERE player_key = ? AND game = ? AND mode = ?`,
+      `SELECT ${aggregate(scoreOrder(game, mode))}(score) AS best FROM scores WHERE player_key = ? AND game = ? AND mode = ?`,
     )
     .bind(key, game, mode)
     .first<{ best: number }>();
@@ -127,7 +127,7 @@ export async function playerBest(db: Db, key: string, game: GameId, mode: string
 function positionStatement(db: Db, board: Board, key: string): DbStatement {
   return db
     .prepare(
-      `${rankedCte(CATALOG[board.game].order)}
+      `${rankedCte(scoreOrder(board.game, board.mode))}
        SELECT COALESCE((SELECT rank FROM ranked WHERE player_key = ?), 0) AS rank,
               (SELECT COUNT(*) FROM ranked) AS total`,
     )
@@ -151,7 +151,7 @@ export async function ranking(
   key: string | null,
   limit: number,
 ): Promise<{ rows: (RankingEntry & { me: boolean })[]; me: RankingEntry | null; total: number }> {
-  const cte = rankedCte(CATALOG[board.game].order);
+  const cte = rankedCte(scoreOrder(board.game, board.mode));
   const params = [board.game, board.mode, board.since];
   const [top, mine, count] = await db.batch<Record<string, number | string>>([
     db
@@ -194,12 +194,16 @@ export async function playerBests(db: Db, key: string): Promise<PlayerBest[]> {
     )
     .bind(key)
     .all<{ game: GameId; mode: string; high: number; low: number; plays: number }>();
-  return results
-    .filter((row) => row.game in CATALOG)
-    .map((row) => ({
-      game: row.game,
-      mode: row.mode,
-      best: CATALOG[row.game].order === "desc" ? row.high : row.low,
-      plays: row.plays,
-    }));
+  return results.flatMap((row) => {
+    const rule = scoreRule(row.game, row.mode);
+    if (rule === null) return [];
+    return [
+      {
+        game: row.game,
+        mode: row.mode,
+        best: rule.order === "desc" ? row.high : row.low,
+        plays: row.plays,
+      },
+    ];
+  });
 }

@@ -74,10 +74,10 @@ export function recordPlay(
 export function mergeServerBests(
   records: Records,
   bests: PlayerBest[],
-  orderOf: (game: string) => ScoreOrder | null,
+  orderOf: (game: string, mode: string) => ScoreOrder | null,
 ): Records {
   return bests.reduce((merged, server) => {
-    const order = orderOf(server.game);
+    const order = orderOf(server.game, server.mode);
     if (order === null) return merged;
     const local = getModeRecord(merged, server.game, server.mode);
     const best =

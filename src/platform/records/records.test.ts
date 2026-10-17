@@ -95,6 +95,21 @@ describe("mergeServerBests", () => {
     expect(getModeRecord(merged, "snake", "normal")).toMatchObject({ best: 12, plays: 3 });
     expect(merged.unknown).toBeUndefined();
   });
+
+  it("AC-R6 compares each mode by its own order", () => {
+    let records = play({}, 30_000, { game: "mines", mode: "easy", order: "asc" }).records;
+    records = play(records, 150, { game: "mines", mode: "wide", order: "desc" }).records;
+    const merged = mergeServerBests(
+      records,
+      [
+        { game: "mines", mode: "easy", best: 20_000, plays: 1 },
+        { game: "mines", mode: "wide", best: 120, plays: 1 },
+      ],
+      (_game, mode) => (mode === "wide" ? "desc" : "asc"),
+    );
+    expect(getModeRecord(merged, "mines", "easy").best).toBe(20_000);
+    expect(getModeRecord(merged, "mines", "wide").best).toBe(150);
+  });
 });
 
 describe("storage", () => {

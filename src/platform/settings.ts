@@ -27,6 +27,18 @@ export const DEFAULT_SETTINGS: Settings = {
   name: null,
 };
 
+/** 保存したモードがそのゲームにあればそれ、なければ最初のモード */
+export function selectedMode(
+  settings: Settings,
+  game: { id: GameId; modes: readonly { id: string }[] },
+): string {
+  const saved = settings.modes[game.id];
+  if (saved !== undefined && game.modes.some((mode) => mode.id === saved)) return saved;
+  const first = game.modes[0];
+  if (!first) throw new Error(`モードのないゲーム: ${game.id}`);
+  return first.id;
+}
+
 export function parseSettings(raw: string | null): Settings {
   if (raw === null) return DEFAULT_SETTINGS;
   try {

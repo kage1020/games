@@ -1,4 +1,4 @@
-import { CATALOG, isValidScore } from "@shared/catalog.ts";
+import { isValidScore, scoreOrder } from "@shared/catalog.ts";
 import { Heart, Volume2, VolumeX } from "lucide-react";
 import {
   type CSSProperties,
@@ -28,7 +28,7 @@ import { useApi } from "@/platform/ranking/context.tsx";
 import { submitScore } from "@/platform/ranking/submit.ts";
 import { getModeRecord, recordPlay } from "@/platform/records/records.ts";
 import { recordsStore } from "@/platform/records/store.ts";
-import { settingsStore, toggleFavorite } from "@/platform/settings.ts";
+import { selectedMode, settingsStore, toggleFavorite } from "@/platform/settings.ts";
 import { createSound } from "@/platform/sound.ts";
 import { useStore } from "@/platform/store.ts";
 import { randomSeed } from "@/sdk/rng.ts";
@@ -54,7 +54,7 @@ function Play({ game }: { game: GameDefinition }) {
   const reducedMotion = useReducedMotion();
   const settings = useStore(settingsStore);
   const records = useStore(recordsStore);
-  const mode = settings.modes[game.id] ?? game.modes[0]?.id ?? "normal";
+  const mode = selectedMode(settings, game);
   const [session, dispatch] = useReducer(sessionReducer, game.timed, createSession);
   // 始めたときのモード。遊んでいる間に別のタブで変わっても、この回はこれで記録する
   const [runMode, setRunMode] = useState(mode);
@@ -132,7 +132,7 @@ function Play({ game }: { game: GameDefinition }) {
       const outcome = recordPlay(recordsStore.get(), {
         game: game.id,
         mode: runMode,
-        order: CATALOG[game.id].order,
+        order: scoreOrder(game.id, runMode),
         score: result.score,
         at,
       });

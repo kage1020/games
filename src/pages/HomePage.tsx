@@ -4,7 +4,7 @@ import { pageTitle, SITE_TAGLINE } from "@/app/site.ts";
 import { ContentCard, Gallery, Segmented } from "@/design-system/index.ts";
 import { getModeRecord } from "@/platform/records/records.ts";
 import { recordsStore } from "@/platform/records/store.ts";
-import { settingsStore } from "@/platform/settings.ts";
+import { selectedMode, settingsStore } from "@/platform/settings.ts";
 import { useStore } from "@/platform/store.ts";
 import type { GameDefinition, Genre } from "@/sdk/types.ts";
 
@@ -29,7 +29,7 @@ export function HomePage() {
     .sort((a, b) => Number(b.favorite) - Number(a.favorite) || a.order - b.order);
 
   const meta = (game: GameDefinition) => {
-    const mode = settings.modes[game.id] ?? game.modes[0]?.id ?? "normal";
+    const mode = selectedMode(settings, game);
     const best = getModeRecord(records, game.id, mode).best;
     const last = best === null ? game.duration : `ベスト ${game.formatScore(best)}`;
     return `${game.genre} · ${game.players} · ${last}`;
