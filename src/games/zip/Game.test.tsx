@@ -11,6 +11,8 @@ const props = () => ({
   reducedMotion: true,
   onHud: vi.fn(),
   onFinish: vi.fn(),
+  saved: null,
+  onSave: vi.fn(),
 });
 
 describe("ZipGame", () => {

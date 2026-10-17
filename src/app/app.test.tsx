@@ -8,6 +8,7 @@ import { identityStore } from "@/platform/identity.ts";
 import { type ApiClient, ApiRequestError } from "@/platform/ranking/client.ts";
 import { ApiProvider } from "@/platform/ranking/context.tsx";
 import { recordsStore } from "@/platform/records/store.ts";
+import { getSave, readSave, savesStore, writeSave } from "@/platform/saves.ts";
 import { settingsStore } from "@/platform/settings.ts";
 import type { GameDefinition, GameProps } from "@/sdk/types.ts";
 import { mediaMatches } from "../test-setup.ts";
@@ -37,9 +38,13 @@ function fakeApi(overrides: Partial<ApiClient> = {}): ApiClient {
 }
 
 let finishGame: ((score: number | null) => void) | null = null;
+let saveGame: GameProps["onSave"] | null = null;
+let gameSaved: unknown;
 
-function FakeGame({ paused, onFinish }: GameProps) {
+function FakeGame({ paused, onFinish, saved, onSave }: GameProps) {
   finishGame = (score) => onFinish({ score });
+  saveGame = onSave;
+  gameSaved = saved;
   return <p>{paused ? "止まっている" : "動いている"}</p>;
 }
 
@@ -322,6 +327,57 @@ describe("play robustness", () => {
     expect(stage).toHaveClass("is-fill");
     await act(async () => finishGame?.(30));
     expect(stage).toHaveClass("is-fill");
+  });
+
+  it("AC-U22 offers to continue a saved run, or to start over without losing it", async () => {
+    const twoModes = fakeGame({
+      id: "mines",
+      title: "マインスイーパー",
+      modes: [
+        { id: "easy", label: "初級" },
+        { id: "infinite", label: "無限" },
+      ],
+    });
+    writeSave("mines", "infinite", {
+      state: { opened: [0, 0] },
+      summary: [
+        { label: "開いたマス", value: "1,234" },
+        { label: "時間", value: "12:34.5" },
+      ],
+    });
+    act(() => {
+      settingsStore.set((current) => ({ ...current, modes: { mines: "infinite" } }));
+    });
+    renderApp("/mines", { games: [twoModes] });
+    const resume = await screen.findByRole("button", { name: "続きから" });
+    await waitFor(() => expect(resume).toHaveFocus());
+    expect(screen.getByText("開いたマス 1,234 · 時間 12:34.5")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("radio", { name: "初級" }));
+    expect(screen.getByRole("button", { name: "はじめる" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "続きから" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("radio", { name: "無限" }));
+    await userEvent.click(screen.getByRole("button", { name: "続きから" }));
+    await screen.findByText("動いている");
+    expect(gameSaved).toEqual({ opened: [0, 0] });
+
+    act(() => {
+      saveGame?.({ state: { opened: [0, 0, 1, 0] }, summary: [] });
+    });
+    expect(readSave("mines", "infinite")).toEqual({ opened: [0, 0, 1, 0] });
+
+    await act(async () => finishGame?.(2));
+    await userEvent.click(await screen.findByRole("button", { name: "もう一度" }));
+    expect(gameSaved).toBeNull();
+
+    act(() => {
+      settingsStore.set((current) => ({ ...current, modes: { mines: "easy" } }));
+    });
+    await userEvent.click(screen.getByRole("radio", { name: "無限" }));
+    await userEvent.click(await screen.findByRole("button", { name: "はじめから" }));
+    await screen.findByText("動いている");
+    expect(gameSaved).toBeNull();
+    expect(getSave(savesStore.get(), "mines", "infinite")).not.toBeNull();
   });
 });
 

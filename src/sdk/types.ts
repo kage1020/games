@@ -20,6 +20,14 @@ export interface GameResult {
   note?: string;
 }
 
+/** 途中の保存。ゲームとモードごとに 1 つ */
+export interface SaveData {
+  /** 続きから始めるときに GameProps.saved で戻る状態。JSON にできる値にする */
+  state: unknown;
+  /** 「続きから」に添える途中の様子 */
+  summary: HudItem[];
+}
+
 export interface GameProps {
   mode: string;
   /** true の間は時間を進めず、入力も受けない */
@@ -31,6 +39,10 @@ export interface GameProps {
   /** Stage の HUD に出す数値。表示が変わるときだけ呼ぶ */
   onHud(items: HudItem[]): void;
   onFinish(result: GameResult): void;
+  /** 続きから始めるときの保存した状態。はじめからなら null。読み戻せない値も来うるので確かめて使う */
+  saved: unknown;
+  /** 途中を端末に保存する。null で消す。終わりが来ないことのあるモードで、閉じても続きから遊べるようにする */
+  onSave(save: SaveData | null): void;
 }
 
 export type Genre = "パズル" | "アクション" | "脳トレ";

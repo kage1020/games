@@ -22,6 +22,7 @@ import {
   tick,
   toggleFlag,
 } from "./infinite.ts";
+import { type InfiniteProgress, restoreProgress, saveProgress } from "./infiniteSave.ts";
 import { boardPoint, clampSpan, follow, frameSize, zoomAt } from "./infiniteView.ts";
 
 /** 始めたときに短いほうの辺に並べるマスの数 */
@@ -43,9 +44,7 @@ interface Frame {
   span: number;
 }
 
-interface View extends Frame {
-  game: InfiniteState;
-  cursor: Cell;
+interface View extends InfiniteProgress {
   /** 画面の横 / 縦 */
   aspect: number;
 }
@@ -137,15 +136,23 @@ function twoPoints(pointers: Map<number, Point>): [Point, Point] | null {
   return a && b ? [a, b] : null;
 }
 
-export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProps) {
+export function InfiniteMines({ seed, paused, sound, saved, onHud, onFinish, onSave }: GameProps) {
   const prefix = `mines-${useId().replace(/[^\w-]/g, "")}`;
-  const [view, dispatch] = useReducer(reduce, seed, (initial) => ({
-    game: createInfinite(initial),
-    cursor: { x: 0, y: 0 },
-    center: { x: 0.5, y: 0.5 },
-    span: START_SPAN,
-    aspect: 1,
-  }));
+  // 続きから始めるときは保存したところから。読み戻せなければはじめから
+  const [resumed] = useState(() => (saved === null ? null : restoreProgress(saved)));
+  const [view, dispatch] = useReducer(
+    reduce,
+    seed,
+    (initial): View => ({
+      ...(resumed ?? {
+        game: createInfinite(initial),
+        cursor: { x: 0, y: 0 },
+        center: { x: 0.5, y: 0.5 },
+        span: START_SPAN,
+      }),
+      aspect: 1,
+    }),
+  );
   const [keyboard, setKeyboard] = useState(false);
   const [pressing, setPressing] = useState<Cell | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -170,15 +177,21 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
   }, [openedText, timeText]);
 
   const opened = game.revealed.size;
+  // 続きから始めたときに鳴らさないよう、増えたときだけ鳴らす
+  const lastOpened = useRef(opened);
   const onOpened = useEffectEvent((count: number) => {
-    if (count > 0 && game.phase === "playing") sound.play("tap");
+    if (count > lastOpened.current && game.phase === "playing") sound.play("tap");
+    lastOpened.current = count;
   });
   useEffect(() => {
     onOpened(opened);
   }, [opened]);
 
   const onPhase = useEffectEvent((phase: InfiniteState["phase"]) => {
-    if (phase === "lost") sound.play("bad");
+    if (phase !== "lost") return;
+    sound.play("bad");
+    // 結果が出るまでの間に画面を離れても、終わった回を続きとして残さない
+    onSave(null);
   });
   useEffect(() => {
     onPhase(game.phase);
@@ -195,6 +208,40 @@ export function InfiniteMines({ seed, paused, sound, onHud, onFinish }: GameProp
     const timer = setTimeout(finish, LOST_PAUSE);
     return () => clearTimeout(timer);
   }, [paused, over]);
+
+  const dropUnreadable = useEffectEvent(() => {
+    if (saved !== null && resumed === null) onSave(null);
+  });
+  useEffect(() => {
+    dropUnreadable();
+  }, []);
+
+  const save = useEffectEvent(() => {
+    if (game.phase !== "playing") return;
+    onSave({
+      state: saveProgress({ game, center, span, cursor }),
+      summary: [
+        { label: "開いたマス", value: formatNumber(game.revealed.size) },
+        { label: "時間", value: formatDuration(game.elapsed) },
+      ],
+    });
+  });
+  // 開いたマスと旗が変わるたびに保存する。時間が進むだけでは保存しない
+  const { revealed, flagged } = game;
+  useEffect(() => {
+    if (revealed.size > 0 || flagged.size > 0) save();
+  }, [revealed, flagged]);
+  useEffect(() => {
+    if (paused) save();
+  }, [paused]);
+  useEffect(() => {
+    const onPageHide = () => save();
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      window.removeEventListener("pagehide", onPageHide);
+      save();
+    };
+  }, []);
 
   /** まだ描いていない動きも含めた、いまの範囲 */
   const currentFrame = (): Frame => pending.current ?? { center, span };

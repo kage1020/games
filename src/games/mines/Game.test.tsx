@@ -3,7 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resizeElement } from "../../test-setup.ts";
 import MinesGame from "./Game.tsx";
-import { createInfinite, isMine, reveal } from "./infinite.ts";
+import { cellKey, createInfinite, isMine, reveal, tick } from "./infinite.ts";
+import { restoreProgress, saveProgress } from "./infiniteSave.ts";
 
 const props = () => ({
   mode: "easy",
@@ -13,6 +14,8 @@ const props = () => ({
   reducedMotion: true,
   onHud: vi.fn(),
   onFinish: vi.fn(),
+  saved: null as unknown,
+  onSave: vi.fn(),
 });
 
 describe("MinesGame", () => {
@@ -252,6 +255,116 @@ describe("MinesGame infinite", () => {
     });
     expect(p.onFinish).toHaveBeenCalledTimes(1);
     expect(p.onFinish.mock.calls[0]?.[0]).toMatchObject({ score: opened });
+  });
+});
+
+describe("MinesGame infinite autosave", () => {
+  type Props = ReturnType<typeof props>;
+  const lastSave = (p: Props) => p.onSave.mock.lastCall?.[0];
+  const lastProgress = (p: Props) => restoreProgress(lastSave(p)?.state);
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("AC-G-mines-17 saves from the first open on, whenever cells or flags change", () => {
+    const p = props();
+    render(<MinesGame {...p} mode="infinite" />);
+    expect(p.onSave).not.toHaveBeenCalled();
+    act(() => {
+      fireEvent.keyDown(window, { key: " " });
+    });
+    const board = reveal(createInfinite(p.seed), 0, 0);
+    expect(lastSave(p)?.summary).toEqual([
+      { label: "開いたマス", value: String(board.revealed.size) },
+      { label: "時間", value: "0:00.0" },
+    ]);
+    expect(lastProgress(p)?.game.revealed).toEqual(board.revealed);
+
+    const closed = [...Array(30).keys()].find((x) => !board.revealed.has(cellKey(x, 0)));
+    if (closed === undefined) throw new Error("閉じたマスがない");
+    act(() => {
+      for (let i = 0; i < closed; i++) fireEvent.keyDown(window, { key: "ArrowRight" });
+    });
+    act(() => {
+      fireEvent.keyDown(window, { key: "f" });
+    });
+    expect(lastProgress(p)?.game.flagged.has(cellKey(closed, 0))).toBe(true);
+    expect(lastProgress(p)?.cursor).toEqual({ x: closed, y: 0 });
+  });
+
+  it("AC-G-mines-17 saves when paused, when the page hides and when it leaves the screen", () => {
+    const p = props();
+    const { rerender, unmount } = render(<MinesGame {...p} mode="infinite" />);
+    act(() => {
+      fireEvent.keyDown(window, { key: " " });
+    });
+    p.onSave.mockClear();
+    rerender(<MinesGame {...p} mode="infinite" paused />);
+    expect(p.onSave).toHaveBeenCalledTimes(1);
+
+    p.onSave.mockClear();
+    act(() => {
+      window.dispatchEvent(new Event("pagehide"));
+    });
+    expect(p.onSave).toHaveBeenCalledTimes(1);
+
+    rerender(<MinesGame {...p} mode="infinite" />);
+    act(() => {
+      fireEvent.keyDown(window, { key: "+" });
+    });
+    p.onSave.mockClear();
+    unmount();
+    expect(p.onSave).toHaveBeenCalledTimes(1);
+    expect(lastProgress(p)?.span).toBeLessThan(11);
+  });
+
+  it("AC-G-mines-17 drops the save as soon as a mine opens", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const p = props();
+    const { unmount } = render(<MinesGame {...p} mode="infinite" />);
+    act(() => {
+      fireEvent.keyDown(window, { key: " " });
+    });
+    const board = reveal(createInfinite(p.seed), 0, 0);
+    const mineX = (() => {
+      for (let x = 2; ; x++) if (isMine(board, x, 0)) return x;
+    })();
+    act(() => {
+      for (let i = 0; i < mineX; i++) fireEvent.keyDown(window, { key: "ArrowRight" });
+      fireEvent.keyDown(window, { key: " " });
+    });
+    expect(p.onFinish).not.toHaveBeenCalled();
+    expect(p.onSave).toHaveBeenLastCalledWith(null);
+    unmount();
+    expect(p.onSave).toHaveBeenLastCalledWith(null);
+  });
+
+  it("AC-G-mines-17 resumes the saved board, time and view", () => {
+    const game = tick(reveal(createInfinite(5), 0, 0), 90_000);
+    const saved = saveProgress({
+      game,
+      center: { x: 2.5, y: 0.5 },
+      span: 20,
+      cursor: { x: 2, y: 0 },
+    });
+    const p = { ...props(), seed: 999, saved };
+    render(<MinesGame {...p} mode="infinite" />);
+    const opened = String(game.revealed.size);
+    expect(screen.getByRole("img")).toHaveAccessibleName(`開いたマス ${opened}`);
+    expect(p.onHud).toHaveBeenLastCalledWith([
+      { label: "開いたマス", value: opened },
+      { label: "時間", value: "1:30.0" },
+    ]);
+    expect(screen.getByRole("img").getAttribute("viewBox")).toBe("-750 -950 2000 2000");
+    expect(p.onSave).not.toHaveBeenCalledWith(null);
+  });
+
+  it("AC-G-mines-17 starts over and drops a save it cannot read", () => {
+    const p = { ...props(), saved: { broken: true } };
+    render(<MinesGame {...p} mode="infinite" />);
+    expect(screen.getByRole("img")).toHaveAccessibleName("マスを選んで開く");
+    expect(p.onSave).toHaveBeenCalledWith(null);
   });
 });
 

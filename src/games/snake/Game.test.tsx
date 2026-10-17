@@ -10,6 +10,8 @@ const props = () => ({
   reducedMotion: false,
   onHud: vi.fn(),
   onFinish: vi.fn(),
+  saved: null,
+  onSave: vi.fn(),
 });
 
 describe("SnakeGame", () => {

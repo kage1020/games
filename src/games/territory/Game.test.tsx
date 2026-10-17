@@ -18,6 +18,8 @@ describe("TerritoryGame", () => {
         reducedMotion={false}
         onHud={onHud}
         onFinish={vi.fn()}
+        saved={null}
+        onSave={vi.fn()}
       />,
     );
     expect(screen.getByText("P1")).toBeInTheDocument();
@@ -50,6 +52,8 @@ describe("TerritoryGame", () => {
         reducedMotion={false}
         onHud={vi.fn()}
         onFinish={onFinish}
+        saved={null}
+        onSave={vi.fn()}
       />,
     );
     for (let i = 0; i < 70; i++) {

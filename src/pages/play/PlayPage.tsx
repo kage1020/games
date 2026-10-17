@@ -28,12 +28,13 @@ import { useApi } from "@/platform/ranking/context.tsx";
 import { submitScore } from "@/platform/ranking/submit.ts";
 import { getModeRecord, recordPlay } from "@/platform/records/records.ts";
 import { recordsStore } from "@/platform/records/store.ts";
+import { getSave, readSave, savesStore, writeSave } from "@/platform/saves.ts";
 import { selectedMode, settingsStore, toggleFavorite } from "@/platform/settings.ts";
 import { createSound } from "@/platform/sound.ts";
 import { useStore } from "@/platform/store.ts";
 import { randomSeed } from "@/sdk/rng.ts";
 import { scoreFormat } from "@/sdk/score.ts";
-import type { GameDefinition, GameResult, HudItem } from "@/sdk/types.ts";
+import type { GameDefinition, GameResult, HudItem, SaveData } from "@/sdk/types.ts";
 import { NotFoundPage } from "../NotFoundPage.tsx";
 import { type FinishSummary, ResultPanel, StartPanel } from "./panels.tsx";
 import { RankingPanel } from "./RankingPanel.tsx";
@@ -55,12 +56,15 @@ function Play({ game }: { game: GameDefinition }) {
   const reducedMotion = useReducedMotion();
   const settings = useStore(settingsStore);
   const records = useStore(recordsStore);
+  const saves = useStore(savesStore);
   const mode = selectedMode(settings, game);
   const [session, dispatch] = useReducer(sessionReducer, game.timed, createSession);
   // 始めたときのモード。遊んでいる間に別のタブで変わっても、この回はこれで記録する
   const [runMode, setRunMode] = useState(mode);
   const [hud, setHud] = useState<HudItem[]>([]);
   const [summary, setSummary] = useState<FinishSummary | null>(null);
+  // 続きから始めた回にだけ渡す、保存した状態
+  const [saved, setSaved] = useState<unknown>(null);
   const [rankingVersion, setRankingVersion] = useState(0);
   const screenRef = useRef<HTMLDivElement>(null);
   const seed = useMemo(() => (session.run > 0 ? randomSeed() : 0), [session.run]);
@@ -113,12 +117,20 @@ function Play({ game }: { game: GameDefinition }) {
     };
   }, [playing]);
 
-  const start = () => {
+  const begin = (from: unknown) => {
+    setSaved(from);
     setHud([]);
     setSummary(null);
     setRunMode(mode);
     dispatch({ type: session.status === "ready" ? "start" : "restart" });
   };
+  const start = () => begin(null);
+  const resume = () => begin(readSave(game.id, mode));
+
+  const save = useCallback(
+    (data: SaveData | null) => writeSave(game.id, runMode, data),
+    [game.id, runMode],
+  );
 
   const changeMode = (next: string) => {
     settingsStore.set((current) => ({ ...current, modes: { ...current.modes, [game.id]: next } }));
@@ -190,7 +202,14 @@ function Play({ game }: { game: GameDefinition }) {
 
   let screen = null;
   if (session.status === "ready") {
-    screen = <StartPanel game={game} onStart={start} />;
+    screen = (
+      <StartPanel
+        game={game}
+        save={getSave(saves, game.id, mode)}
+        onStart={start}
+        onResume={resume}
+      />
+    );
   } else if (session.status === "finished" && summary) {
     screen = (
       <ResultPanel game={game} summary={summary} onAgain={start} onShare={() => void share()} />
@@ -204,6 +223,8 @@ function Play({ game }: { game: GameDefinition }) {
           paused={session.status === "paused"}
           seed={seed}
           sound={sound}
+          saved={saved}
+          onSave={save}
           reducedMotion={reducedMotion}
           onHud={setHud}
           onFinish={finish}

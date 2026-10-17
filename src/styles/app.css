@@ -195,6 +195,13 @@ a {
   color: var(--ink-muted);
 }
 
+.play-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+}
+
 .play-result {
   align-items: stretch;
   text-align: left;

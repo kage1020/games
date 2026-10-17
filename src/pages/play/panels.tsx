@@ -3,6 +3,7 @@ import { Play } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Button, Result, Stat } from "@/design-system/index.ts";
 import type { RecordOutcome } from "@/platform/records/records.ts";
+import type { SaveEntry } from "@/platform/saves.ts";
 import { scoreFormat } from "@/sdk/score.ts";
 import type { GameDefinition, GameResult } from "@/sdk/types.ts";
 import { describeResult } from "./session.ts";
@@ -15,16 +16,45 @@ function useInitialFocus<T extends HTMLElement>() {
   return ref;
 }
 
-export function StartPanel({ game, onStart }: { game: GameDefinition; onStart: () => void }) {
+export function StartPanel({
+  game,
+  save,
+  onStart,
+  onResume,
+}: {
+  game: GameDefinition;
+  /** 選んでいるモードの続き。ないときは null */
+  save: SaveEntry | null;
+  onStart: () => void;
+  onResume: () => void;
+}) {
   const button = useInitialFocus<HTMLButtonElement>();
   return (
     <div className="play-panel">
       <p className="title">{game.title}</p>
       <p className="small play-panel-text">{game.summary}</p>
-      <Button ref={button} variant="primary" icon={<Play />} onClick={onStart}>
-        はじめる
-      </Button>
-      <p className="meta play-panel-text">Enter で始める</p>
+      {save ? (
+        <>
+          <div className="play-panel-actions">
+            <Button ref={button} variant="primary" icon={<Play />} onClick={onResume}>
+              続きから
+            </Button>
+            <Button onClick={onStart}>はじめから</Button>
+          </div>
+          <p className="meta play-panel-text">
+            {save.summary
+              .map((item) => `${item.label} ${item.value}${item.unit ?? ""}`)
+              .join(" · ")}
+          </p>
+        </>
+      ) : (
+        <>
+          <Button ref={button} variant="primary" icon={<Play />} onClick={onStart}>
+            はじめる
+          </Button>
+          <p className="meta play-panel-text">Enter で始める</p>
+        </>
+      )}
     </div>
   );
 }
