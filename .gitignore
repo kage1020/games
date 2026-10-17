@@ -1,7 +1,7 @@
 node_modules
 dist
 coverage
-.wrangler
+.cloudflare
 .dev.vars*
 *.tsbuildinfo
 .DS_Store

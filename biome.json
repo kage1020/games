@@ -10,12 +10,10 @@
       "public/**/*.js",
       "*.ts",
       "*.json",
-      "*.jsonc",
       "!!**/node_modules",
       "!!**/dist",
       "!!src/design-system/vendor",
-      "!!src/design-system/tokens.css",
-      "!!worker-configuration.d.ts"
+      "!!src/design-system/tokens.css"
     ]
   },
   "formatter": {
