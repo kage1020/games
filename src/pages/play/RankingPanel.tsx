@@ -52,6 +52,7 @@ export function RankingPanel({
   }
 
   const data = ranking.data;
+  const shownName = name ?? data?.rows.find((row) => row.me)?.name ?? data?.me?.name ?? "guest";
   return (
     <section className="play-ranking" aria-busy={ranking.status === "loading"}>
       <Ranking
@@ -68,7 +69,7 @@ export function RankingPanel({
         {body}
       </Ranking>
       <p className="meta ranking-name">
-        ランキングでの名前は「{name ?? "guest"}」。
+        ランキングでの名前は「{shownName}」。
         <Button variant="link" href="/settings#name" className="ranking-name-link">
           変える
         </Button>

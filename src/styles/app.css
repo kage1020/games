@@ -101,7 +101,8 @@ a {
   margin-top: var(--space-8);
 }
 
-ul.kg-gallery {
+/* ul にした格子の既定の余白だけ消す。配置は各画面のクラスで決める */
+:where(ul.kg-gallery) {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -151,7 +152,8 @@ ul.kg-gallery {
   inset: 0;
 }
 
-.play-screen:focus {
+/* 描画面へのフォーカスはキー操作を届けるため。カーソルはゲームが描く */
+.play-stage .kg-stage-screen:focus {
   outline: none;
 }
 
