@@ -685,12 +685,18 @@ describe("MinesGame frontier", () => {
 
   it("AC-G-mines-23 resumes the saved board with its sectors and stepped-on mines", () => {
     const { game, last } = oneLeft();
-    const secured = revealFrontier(game, last.x, last.y);
-    const mine = [...Array(40).keys()]
-      .map((i) => ({ x: i - 20, y: -9 }))
-      .find((cell) => isMine(secured, cell.x, cell.y));
+    // 区画 "0,0" を確保し、隣の区画 "1,0" を少し開いてから、そこの地雷を踏む
+    let played = revealFrontier(game, last.x, last.y);
+    const nextSector = Array.from({ length: SECTOR * SECTOR }, (_, i) => ({
+      x: SECTOR + (i % SECTOR),
+      y: Math.floor(i / SECTOR),
+    }));
+    const safe = nextSector.filter((cell) => !isMine(played, cell.x, cell.y));
+    for (const cell of safe.slice(0, 5)) played = revealFrontier(played, cell.x, cell.y);
+    const mine = nextSector.find((cell) => isMine(played, cell.x, cell.y));
     if (!mine) throw new Error("地雷がない");
-    const played = tickFrontier(revealFrontier(secured, mine.x, mine.y), 75_000);
+    played = tickFrontier(revealFrontier(played, mine.x, mine.y), 75_000);
+    expect(played.lost).toEqual(new Set(["1,0"]));
     const p = { ...props(), seed: 999, saved: resumeAt(played, mine) };
     const { container } = render(<MinesGame {...p} mode="frontier" />);
     expect(p.onHud).toHaveBeenLastCalledWith([
@@ -699,6 +705,7 @@ describe("MinesGame frontier", () => {
       { label: "時間", value: "1:15.0" },
     ]);
     expect(container.querySelectorAll(".mines-hit")).toHaveLength(1);
+    expect(container.querySelectorAll(".mines-lost")).toHaveLength(1);
     expect(p.sound.play).not.toHaveBeenCalled();
     expect(p.onSave).not.toHaveBeenCalledWith(null);
   });
