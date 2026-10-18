@@ -8,7 +8,7 @@ export const mines: GameDefinition = {
   title: "マインスイーパー",
   summary: "数字を手がかりに、地雷を避けて開く",
   description:
-    "数字は周り 8 マスにある地雷の数。地雷のないマスをすべて開くまでの時間を競う。無限は盤面に端がなく、地雷を踏むまでに開いたマスの数を競う。最初に開くマスとその周りには地雷がない。",
+    "数字は周り 8 マスにある地雷の数。地雷のないマスをすべて開くまでの時間を競う。無限は盤面に端がなく、地雷を踏むまでに開いたマスの数を競う。開拓は端のない盤面を 8×8 の区画に分け、確保した区画の数を競う。踏んでもその区画を失うだけで、終えるときは自分で決める。最初に開くマスとその周りには地雷がない。",
   genre: "パズル",
   players: "1人",
   duration: "5分",
@@ -27,6 +27,16 @@ export const mines: GameDefinition = {
         delta: (diff) => ({ value: diff, unit: "マス" }),
       },
     },
+    {
+      id: "frontier",
+      label: "開拓",
+      fill: true,
+      score: {
+        label: "確保した区画",
+        format: formatNumber,
+        delta: (diff) => ({ value: diff, unit: "区画" }),
+      },
+    },
   ],
   score: {
     label: "時間",
@@ -39,8 +49,8 @@ export const mines: GameDefinition = {
     { keys: ["←", "→", "↑", "↓"], text: "で選ぶ" },
     { keys: ["Space"], text: "で開く" },
     { keys: ["F"], text: "で旗を立てる" },
-    { text: "無限ではドラッグで動かし、ピンチかホイールで拡大・縮小" },
-    { keys: ["+", "-"], text: "で拡大・縮小（無限）" },
+    { text: "無限・開拓ではドラッグで動かし、ピンチかホイールで拡大・縮小" },
+    { keys: ["+", "-"], text: "で拡大・縮小（無限・開拓）" },
   ],
   Thumb,
   Game: lazy(() => import("./Game.tsx")),

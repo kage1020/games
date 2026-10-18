@@ -79,34 +79,70 @@ export function createInfinite(seed: number): InfiniteState {
   };
 }
 
-/** cells を開き、0 のマスからはつながる 0 とその縁まで広げる。旗のマスは開かない */
-function open(state: InfiniteState, cells: Cell[]): InfiniteState {
-  const targets = cells.filter(
-    (cell) =>
-      !state.revealed.has(cellKey(cell.x, cell.y)) && !state.flagged.has(cellKey(cell.x, cell.y)),
-  );
-  const mine = targets.find((cell) => isMine(state, cell.x, cell.y));
-  if (mine) return { ...state, phase: "lost", exploded: mine };
+/** 地雷とわかっているマス（旗など）か。開かず、開いた数字のマスを押したときに数える */
+export type Known = (key: string) => boolean;
 
-  const revealed = new Map(state.revealed);
-  const queue = [...targets];
+export interface Spread {
+  revealed: ReadonlyMap<string, number>;
+  /** 開こうとした cells のうちの地雷。cells の順に並ぶ */
+  mines: Cell[];
+}
+
+/**
+ * cells のうち地雷でないマスを開き、0 のマスからはつながる 0 とその縁まで広げる。
+ * 開いたマスと known のマスは開かない
+ */
+export function spread(
+  board: Pick<InfiniteState, "seed" | "start" | "revealed">,
+  known: Known,
+  cells: Cell[],
+): Spread {
+  const targets = cells.filter(
+    (cell) => !board.revealed.has(cellKey(cell.x, cell.y)) && !known(cellKey(cell.x, cell.y)),
+  );
+  const mines = targets.filter((cell) => isMine(board, cell.x, cell.y));
+  const queue = targets.filter((cell) => !isMine(board, cell.x, cell.y));
+  if (queue.length === 0) return { revealed: board.revealed, mines };
+
+  const revealed = new Map(board.revealed);
   for (let next = queue.pop(); next !== undefined; next = queue.pop()) {
     const key = cellKey(next.x, next.y);
     if (revealed.has(key)) continue;
-    const count = adjacentMines(state, next.x, next.y);
+    const count = adjacentMines(board, next.x, next.y);
     revealed.set(key, count);
     if (count > 0) continue;
     for (const cell of neighbors(next.x, next.y)) {
       const around = cellKey(cell.x, cell.y);
-      if (!revealed.has(around) && !state.flagged.has(around)) queue.push(cell);
+      if (!revealed.has(around) && !known(around)) queue.push(cell);
     }
   }
-  return { ...state, revealed };
+  return { revealed, mines };
+}
+
+/**
+ * 開いた数字のマス (x, y) の周りで、地雷とわかっているマスの数が数字と同じなら、残りの閉じた周りを返す。
+ * そうでなければ空
+ */
+export function chordTargets(
+  revealed: ReadonlyMap<string, number>,
+  known: Known,
+  x: number,
+  y: number,
+): Cell[] {
+  const count = revealed.get(cellKey(x, y));
+  if (count === undefined || count === 0) return [];
+  const around = neighbors(x, y);
+  const marks = around.filter((cell) => known(cellKey(cell.x, cell.y))).length;
+  if (marks !== count) return [];
+  return around.filter((cell) => {
+    const key = cellKey(cell.x, cell.y);
+    return !revealed.has(key) && !known(key);
+  });
 }
 
 /**
  * マスを開く。最初の 1 回で、そのマスと周りを地雷のない場所にする。
- * 開いた数字のマスなら、周りの旗が数字と同じときに旗のない周りを開く。
+ * 開いた数字のマスなら、周りの旗が数字と同じときに旗のない周りを開く。開くマスに地雷があれば何も開かずに終わる
  */
 export function reveal(state: InfiniteState, x: number, y: number): InfiniteState {
   if (state.phase === "lost") return state;
@@ -114,22 +150,26 @@ export function reveal(state: InfiniteState, x: number, y: number): InfiniteStat
   if (state.flagged.has(key)) return state;
   const current: InfiniteState =
     state.start === null ? { ...state, start: { x, y }, phase: "playing" } : state;
-  const count = current.revealed.get(key);
-  if (count === undefined) return open(current, [{ x, y }]);
+  const flagged: Known = (cell) => current.flagged.has(cell);
+  const cells = current.revealed.has(key)
+    ? chordTargets(current.revealed, flagged, x, y)
+    : [{ x, y }];
+  if (cells.length === 0) return state;
 
-  const around = neighbors(x, y);
-  const flags = around.filter((cell) => current.flagged.has(cellKey(cell.x, cell.y))).length;
-  const closed = around.filter((cell) => {
-    const neighbour = cellKey(cell.x, cell.y);
-    return !current.revealed.has(neighbour) && !current.flagged.has(neighbour);
-  });
-  if (count === 0 || flags !== count || closed.length === 0) return state;
-  return open(current, closed);
+  const { revealed, mines } = spread(current, flagged, cells);
+  const [mine] = mines;
+  if (mine) return { ...current, phase: "lost", exploded: mine };
+  return { ...current, revealed };
+}
+
+/** 旗を立て外しできるマス */
+export function canToggleFlag(state: InfiniteState, x: number, y: number): boolean {
+  return state.phase !== "lost" && !state.revealed.has(cellKey(x, y));
 }
 
 export function toggleFlag(state: InfiniteState, x: number, y: number): InfiniteState {
+  if (!canToggleFlag(state, x, y)) return state;
   const key = cellKey(x, y);
-  if (state.phase === "lost" || state.revealed.has(key)) return state;
   const flagged = new Set(state.flagged);
   if (!flagged.delete(key)) flagged.add(key);
   return { ...state, flagged };

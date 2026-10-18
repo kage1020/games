@@ -1,9 +1,21 @@
 import { memo, type ReactNode } from "react";
 import { CELL, Flag, PressRing } from "./CellView.tsx";
+import { SECTOR, sectorAt } from "./frontier.ts";
 import { type Cell, cellKey, isMine } from "./infinite.ts";
 
 const HALF = CELL / 2;
 const DOT = 3;
+/** 区画を確保したマスに重ねる accent の濃さ */
+const SECURED_OPACITY = 0.14;
+
+const square = (px: number, py: number) => `M${px} ${py}h${CELL}v${CELL}h${-CELL}z`;
+
+/** from から from + length までにある、step の倍数 */
+function multiples(from: number, length: number, step: number): number[] {
+  const result: number[] = [];
+  for (let at = Math.ceil(from / step) * step; at <= from + length; at += step) result.push(at);
+  return result;
+}
 
 export interface InfiniteBoardProps {
   /** pattern と旗の id の頭。ページ内で重ならないようにする */
@@ -14,6 +26,11 @@ export interface InfiniteBoardProps {
   start: Cell | null;
   over: boolean;
   exploded: Cell | null;
+  /** 踏んだ地雷（開拓）。開いたマスの上に地雷として描く */
+  hits?: ReadonlySet<string>;
+  /** 確保した区画と確保できなくなった区画（開拓）。渡すと区画の境目も描く */
+  secured?: ReadonlySet<string>;
+  lost?: ReadonlySet<string>;
   /** 映す範囲の左上（マスの単位、小数もある） */
   left: number;
   top: number;
@@ -27,7 +44,7 @@ export interface InfiniteBoardProps {
 
 /**
  * 画面に映る範囲だけを描く。閉じたマスは模様 1 つで敷き、開いたマスは 1 本の path で上から塗る。
- * 要素を作るのは数字・旗と、終わったあとの地雷だけ
+ * 要素を作るのは数字・旗と、踏んだ地雷・終わったあとの地雷だけ。区画は色ごとに 1 本の path で塗る
  */
 export const InfiniteBoard = memo(function InfiniteBoard({
   prefix,
@@ -37,6 +54,9 @@ export const InfiniteBoard = memo(function InfiniteBoard({
   start,
   over,
   exploded,
+  hits,
+  secured,
+  lost,
   left,
   top,
   width,
@@ -45,6 +65,8 @@ export const InfiniteBoard = memo(function InfiniteBoard({
   pressing,
 }: InfiniteBoardProps) {
   const opened: string[] = [];
+  const securedCells: string[] = [];
+  const lostCells: string[] = [];
   const dots: string[] = [];
   const marks: ReactNode[] = [];
   const flags: ReactNode[] = [];
@@ -54,8 +76,27 @@ export const InfiniteBoard = memo(function InfiniteBoard({
       const px = x * CELL;
       const py = y * CELL;
       const count = revealed.get(key);
+      const hit = hits?.has(key) === true;
+      if (count !== undefined || hit) {
+        opened.push(square(px, py));
+        const sector = secured || lost ? sectorAt(x, y) : null;
+        if (sector !== null && secured?.has(sector)) securedCells.push(square(px, py));
+        if (sector !== null && lost?.has(sector)) lostCells.push(square(px, py));
+      }
+      if (hit) {
+        marks.push(
+          <circle
+            key={key}
+            className="mines-hit"
+            cx={px + HALF}
+            cy={py + HALF}
+            r={26}
+            style={{ fill: "var(--danger)" }}
+          />,
+        );
+        continue;
+      }
       if (count !== undefined) {
-        opened.push(`M${px} ${py}h${CELL}v${CELL}h${-CELL}z`);
         if (count === 0) {
           dots.push(
             `M${px + HALF - DOT} ${py + HALF}a${DOT} ${DOT} 0 1 0 ${DOT * 2} 0a${DOT} ${DOT} 0 1 0 ${-DOT * 2} 0`,
@@ -83,7 +124,7 @@ export const InfiniteBoard = memo(function InfiniteBoard({
       }
       if (mine && !flag) {
         const blown = exploded?.x === x && exploded.y === y;
-        opened.push(`M${px} ${py}h${CELL}v${CELL}h${-CELL}z`);
+        opened.push(square(px, py));
         marks.push(
           <circle
             key={key}
@@ -104,6 +145,18 @@ export const InfiniteBoard = memo(function InfiniteBoard({
       }
     }
   }
+
+  const borders =
+    secured === undefined
+      ? []
+      : [
+          ...multiples(left, width, SECTOR).map(
+            (at) => `M${at * CELL} ${top * CELL}V${(top + height) * CELL}`,
+          ),
+          ...multiples(top, height, SECTOR).map(
+            (at) => `M${left * CELL} ${at * CELL}H${(left + width) * CELL}`,
+          ),
+        ];
 
   return (
     <>
@@ -131,9 +184,31 @@ export const InfiniteBoard = memo(function InfiniteBoard({
         style={{ fill: `url(#${prefix}-closed)` }}
       />
       {opened.length > 0 ? <path d={opened.join("")} style={{ fill: "var(--bg)" }} /> : null}
+      {securedCells.length > 0 ? (
+        <path
+          className="mines-secured"
+          d={securedCells.join("")}
+          style={{ fill: "var(--accent)", fillOpacity: SECURED_OPACITY }}
+        />
+      ) : null}
+      {lostCells.length > 0 ? (
+        <path
+          className="mines-lost"
+          d={lostCells.join("")}
+          style={{ fill: "var(--danger-soft)" }}
+        />
+      ) : null}
       {dots.length > 0 ? <path d={dots.join("")} style={{ fill: "var(--border)" }} /> : null}
       {marks}
       {flags}
+      {borders.length > 0 ? (
+        <path
+          className="mines-sectors"
+          d={borders.join("")}
+          style={{ fill: "none", stroke: "var(--border)", strokeWidth: 1 }}
+          vectorEffect="non-scaling-stroke"
+        />
+      ) : null}
       {cursor ? (
         <rect
           x={cursor.x * CELL + 2}

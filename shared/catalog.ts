@@ -43,6 +43,7 @@ export const CATALOG: Record<GameId, CatalogEntry> = {
       easy: { order: "asc", min: 1_000, max: 60 * MINUTE },
       normal: { order: "asc", min: 1_000, max: 60 * MINUTE },
       infinite: { order: "desc", min: 1, max: 1_000_000 },
+      frontier: { order: "desc", min: 1, max: 100_000 },
     },
   },
   breakout: { modes: { normal: { order: "desc", min: 0, max: 100_000 } } },

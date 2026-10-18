@@ -2,9 +2,16 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resizeElement } from "../../test-setup.ts";
+import {
+  createFrontier,
+  type FrontierState,
+  reveal as revealFrontier,
+  SECTOR,
+  tick as tickFrontier,
+} from "./frontier.ts";
 import MinesGame from "./Game.tsx";
 import { cellKey, createInfinite, isMine, reveal, tick } from "./infinite.ts";
-import { restoreProgress, saveProgress } from "./infiniteSave.ts";
+import { restoreFrontier, restoreProgress, saveFrontier, saveProgress } from "./infiniteSave.ts";
 
 const props = () => ({
   mode: "easy",
@@ -479,5 +486,233 @@ describe("MinesGame long press", () => {
       fireEvent.keyDown(window, { key: "f" });
     });
     expect(p.sound.play).not.toHaveBeenCalledWith("flag");
+  });
+});
+
+describe("MinesGame frontier", () => {
+  type Props = ReturnType<typeof props>;
+  const hud = (p: Props) => p.onHud.mock.lastCall?.[0];
+  const lastSave = (p: Props) => p.onSave.mock.lastCall?.[0];
+  const firstMineX = (seed: number) => {
+    const board = reveal(createInfinite(seed), 0, 0);
+    for (let x = 2; ; x++) if (isMine(board, x, 0)) return x;
+  };
+  const press = (key: string) =>
+    act(() => {
+      fireEvent.keyDown(window, { key });
+    });
+  const stepRight = (count: number) =>
+    act(() => {
+      for (let i = 0; i < count; i++) fireEvent.keyDown(window, { key: "ArrowRight" });
+      fireEvent.keyDown(window, { key: " " });
+    });
+
+  /** 区画 "0,0" の安全なマスを 1 つだけ残して開いた盤面と、残ったマス */
+  function oneLeft() {
+    for (let seed = 1; ; seed++) {
+      let game = revealFrontier(createFrontier(seed), 3, 3);
+      const closed = () => {
+        const cells: { x: number; y: number }[] = [];
+        for (let y = 0; y < SECTOR; y++) {
+          for (let x = 0; x < SECTOR; x++) {
+            if (!isMine(game, x, y) && !game.revealed.has(cellKey(x, y))) cells.push({ x, y });
+          }
+        }
+        return cells;
+      };
+      for (let next = closed(); next.length > 1; next = closed()) {
+        const [cell = { x: 0, y: 0 }] = next;
+        game = revealFrontier(game, cell.x, cell.y);
+      }
+      const [last] = closed();
+      if (last) return { game, last };
+    }
+  }
+  const resumeAt = (game: FrontierState, cursor: { x: number; y: number }) =>
+    saveFrontier({ game, center: { x: cursor.x + 0.5, y: cursor.y + 0.5 }, span: 11, cursor });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("AC-G-mines-21 reports secured sectors, stepped-on mines and time, and draws sector borders", () => {
+    const p = props();
+    const { container } = render(<MinesGame {...p} mode="frontier" />);
+    expect(p.onHud).toHaveBeenLastCalledWith([
+      { label: "区画", value: "0" },
+      { label: "踏んだ地雷", value: "0" },
+      { label: "時間", value: "0:00.0" },
+    ]);
+    expect(container.querySelectorAll(".mines-sectors")).toHaveLength(1);
+    press(" ");
+    expect(p.sound.play).toHaveBeenLastCalledWith("tap");
+    expect(screen.getByRole("img")).toHaveAccessibleName("確保した区画 0、踏んだ地雷 0");
+  });
+
+  it("AC-G-mines-20 keeps playing after a mine and leaves it where it was", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const p = props();
+    const { container } = render(<MinesGame {...p} mode="frontier" />);
+    press(" ");
+    const mineX = firstMineX(p.seed);
+    stepRight(mineX);
+    expect(p.sound.play).toHaveBeenLastCalledWith("bad");
+    expect(hud(p)?.[1]).toEqual({ label: "踏んだ地雷", value: "1" });
+    expect(container.querySelectorAll(".mines-hit")).toHaveLength(1);
+    act(() => {
+      vi.advanceTimersByTime(2_000);
+    });
+    expect(p.onFinish).not.toHaveBeenCalled();
+    expect(screen.getByRole("img")).toHaveAccessibleName("確保した区画 0、踏んだ地雷 1");
+    p.sound.play.mockClear();
+    press("f");
+    expect(p.sound.play).not.toHaveBeenCalled();
+    const board = reveal(createInfinite(p.seed), 0, 0);
+    let down = 1;
+    while (board.revealed.has(cellKey(mineX, down))) down++;
+    for (let i = 0; i < down; i++) press("ArrowDown");
+    press("f");
+    expect(p.sound.play).toHaveBeenLastCalledWith("flag");
+  });
+
+  it("AC-G-mines-19 secures a sector with the good sound alone and colours it", () => {
+    const { game, last } = oneLeft();
+    const p = { ...props(), saved: resumeAt(game, last) };
+    const { container } = render(<MinesGame {...p} mode="frontier" />);
+    expect(p.sound.play).not.toHaveBeenCalled();
+    expect(container.querySelectorAll(".mines-secured")).toHaveLength(0);
+    press(" ");
+    expect(p.sound.play.mock.calls).toEqual([["good"]]);
+    expect(hud(p)?.[0]).toEqual({ label: "区画", value: String(game.secured.size + 1) });
+    expect(container.querySelectorAll(".mines-secured")).toHaveLength(1);
+  });
+
+  it("AC-G-mines-22 offers to end after the first open, and holds the board while it asks", () => {
+    vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame"] });
+    const p = props();
+    render(<MinesGame {...p} mode="frontier" />);
+    expect(screen.queryByRole("button", { name: "ここで終える" })).not.toBeInTheDocument();
+    press(" ");
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    const time = () => hud(p)?.[2]?.value;
+    const before = time();
+    expect(before).not.toBe("0:00.0");
+
+    fireEvent.click(screen.getByRole("button", { name: "ここで終える" }));
+    expect(screen.getByRole("dialog", { name: "ここで終える" })).toHaveTextContent(
+      "確保した区画がないので、記録は残らない。この盤面は消える。",
+    );
+    expect(screen.getByRole("button", { name: "続ける" })).toHaveFocus();
+    const saves = p.onSave.mock.calls.length;
+    act(() => {
+      vi.advanceTimersByTime(1_000);
+    });
+    press("ArrowDown");
+    press(" ");
+    expect(time()).toBe(before);
+    expect(p.onSave).toHaveBeenCalledTimes(saves);
+
+    fireEvent.click(screen.getByRole("button", { name: "続ける" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(time()).not.toBe(before);
+    expect(p.onFinish).not.toHaveBeenCalled();
+  });
+
+  it("AC-G-mines-22 ends with the secured sectors as the score and drops the save", () => {
+    const { game, last } = oneLeft();
+    const p = { ...props(), saved: resumeAt(game, last) };
+    const { unmount } = render(<MinesGame {...p} mode="frontier" />);
+    press(" ");
+    const secured = game.secured.size + 1;
+    fireEvent.click(screen.getByRole("button", { name: "ここで終える" }));
+    expect(screen.getByRole("dialog", { name: "ここで終える" })).toHaveTextContent(
+      `確保した区画 ${secured} を記録する。この盤面は消える。`,
+    );
+    p.onSave.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "終える" }));
+    expect(p.onSave).toHaveBeenCalledWith(null);
+    expect(p.onFinish).toHaveBeenCalledTimes(1);
+    const [saveOrder = 0] = p.onSave.mock.invocationCallOrder;
+    const [finishOrder = 0] = p.onFinish.mock.invocationCallOrder;
+    expect(saveOrder).toBeLessThan(finishOrder);
+    const result = p.onFinish.mock.calls[0]?.[0];
+    expect(result).toMatchObject({ score: secured });
+    expect(result?.stats.map((item: { label: string }) => item.label)).toEqual([
+      "踏んだ地雷",
+      "開いたマス",
+      "時間",
+    ]);
+    unmount();
+    expect(p.onSave).toHaveBeenLastCalledWith(null);
+  });
+
+  it("AC-G-mines-22 leaves no record when no sector is secured", () => {
+    const p = props();
+    render(<MinesGame {...p} mode="frontier" />);
+    press(" ");
+    fireEvent.click(screen.getByRole("button", { name: "ここで終える" }));
+    fireEvent.click(screen.getByRole("button", { name: "終える" }));
+    expect(p.onFinish.mock.calls[0]?.[0]).toMatchObject({
+      score: null,
+      note: "確保した区画がない。記録は残らない。",
+    });
+  });
+
+  it("AC-G-mines-23 saves the stepped-on mines and keeps the save after a mine", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const p = props();
+    render(<MinesGame {...p} mode="frontier" />);
+    press(" ");
+    expect(lastSave(p)?.summary).toEqual([
+      { label: "区画", value: "0" },
+      { label: "踏んだ地雷", value: "0" },
+      { label: "時間", value: "0:00.0" },
+    ]);
+    const mineX = firstMineX(p.seed);
+    stepRight(mineX);
+    expect(restoreFrontier(lastSave(p)?.state)?.game.hits).toEqual(new Set([cellKey(mineX, 0)]));
+    expect(lastSave(p)?.summary[1]).toEqual({ label: "踏んだ地雷", value: "1" });
+    act(() => {
+      vi.advanceTimersByTime(2_000);
+    });
+    expect(p.onSave).not.toHaveBeenCalledWith(null);
+  });
+
+  it("AC-G-mines-23 resumes the saved board with its sectors and stepped-on mines", () => {
+    const { game, last } = oneLeft();
+    const secured = revealFrontier(game, last.x, last.y);
+    const mine = [...Array(40).keys()]
+      .map((i) => ({ x: i - 20, y: -9 }))
+      .find((cell) => isMine(secured, cell.x, cell.y));
+    if (!mine) throw new Error("地雷がない");
+    const played = tickFrontier(revealFrontier(secured, mine.x, mine.y), 75_000);
+    const p = { ...props(), seed: 999, saved: resumeAt(played, mine) };
+    const { container } = render(<MinesGame {...p} mode="frontier" />);
+    expect(p.onHud).toHaveBeenLastCalledWith([
+      { label: "区画", value: String(played.secured.size) },
+      { label: "踏んだ地雷", value: "1" },
+      { label: "時間", value: "1:15.0" },
+    ]);
+    expect(container.querySelectorAll(".mines-hit")).toHaveLength(1);
+    expect(p.sound.play).not.toHaveBeenCalled();
+    expect(p.onSave).not.toHaveBeenCalledWith(null);
+  });
+
+  it("AC-G-mines-23 starts over and drops a save it cannot read", () => {
+    const saved = saveProgress({
+      game: reveal(createInfinite(3), 0, 0),
+      center: { x: 0, y: 0 },
+      span: 11,
+      cursor: { x: 0, y: 0 },
+    });
+    const p = { ...props(), saved };
+    render(<MinesGame {...p} mode="frontier" />);
+    expect(screen.getByRole("img")).toHaveAccessibleName("マスを選んで開く");
+    expect(p.onSave).toHaveBeenCalledWith(null);
   });
 });

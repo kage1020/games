@@ -1,7 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { useGameKeys } from "./hooks.ts";
+import { useGameKeys, useSaveOnLeave } from "./hooks.ts";
 
 function Keys({
   onKey,
@@ -53,5 +53,42 @@ describe("useGameKeys", () => {
     render(<Keys onKey={onKey} active={false} />);
     await userEvent.keyboard("{ArrowUp}");
     expect(onKey).not.toHaveBeenCalled();
+  });
+});
+
+function Leave({ save, paused }: { save: () => void; paused: boolean }) {
+  useSaveOnLeave(save, paused);
+  return null;
+}
+
+describe("useSaveOnLeave", () => {
+  it("saves when paused, when the page hides and when it leaves the screen", () => {
+    const save = vi.fn();
+    const { rerender, unmount } = render(<Leave save={save} paused={false} />);
+    expect(save).not.toHaveBeenCalled();
+    rerender(<Leave save={save} paused />);
+    expect(save).toHaveBeenCalledTimes(1);
+    rerender(<Leave save={save} paused={false} />);
+    expect(save).toHaveBeenCalledTimes(1);
+    act(() => {
+      window.dispatchEvent(new Event("pagehide"));
+    });
+    expect(save).toHaveBeenCalledTimes(2);
+    unmount();
+    expect(save).toHaveBeenCalledTimes(3);
+    window.dispatchEvent(new Event("pagehide"));
+    expect(save).toHaveBeenCalledTimes(3);
+  });
+
+  it("calls the save of the latest render", () => {
+    const first = vi.fn();
+    const latest = vi.fn();
+    const { rerender } = render(<Leave save={first} paused={false} />);
+    rerender(<Leave save={latest} paused={false} />);
+    act(() => {
+      window.dispatchEvent(new Event("pagehide"));
+    });
+    expect(first).not.toHaveBeenCalled();
+    expect(latest).toHaveBeenCalledTimes(1);
   });
 });

@@ -58,6 +58,22 @@ export function useGameKeys(
   }, [active]);
 }
 
+/** 一時停止したとき・ページを離れるとき・画面を閉じるときに save を呼ぶ。GameProps.onSave で途中を残すのに使う */
+export function useSaveOnLeave(save: () => void, paused: boolean): void {
+  const onLeave = useEffectEvent(save);
+  useEffect(() => {
+    if (paused) onLeave();
+  }, [paused]);
+  useEffect(() => {
+    const onPageHide = () => onLeave();
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      window.removeEventListener("pagehide", onPageHide);
+      onLeave();
+    };
+  }, []);
+}
+
 const SWIPE_DISTANCE = 24;
 
 /** スワイプの向き。スワイプを受ける要素には CSS で touch-action: none を付ける */

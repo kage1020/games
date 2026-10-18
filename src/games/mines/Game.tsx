@@ -5,6 +5,7 @@ import { svgPoint, useGameKeys, useGameLoop } from "@/sdk/hooks.ts";
 import { createRng } from "@/sdk/rng.ts";
 import type { GameProps } from "@/sdk/types.ts";
 import { CELL, CellView, LONG_PRESS, LOST_PAUSE, PressRing, RING_DELAY } from "./CellView.tsx";
+import { FrontierMines } from "./FrontierMines.tsx";
 import { InfiniteMines } from "./InfiniteMines.tsx";
 import {
   adjacentMines,
@@ -42,7 +43,9 @@ interface Press {
 }
 
 export default function MinesGame(props: GameProps) {
-  return props.mode === "infinite" ? <InfiniteMines {...props} /> : <FiniteMines {...props} />;
+  if (props.mode === "infinite") return <InfiniteMines {...props} />;
+  if (props.mode === "frontier") return <FrontierMines {...props} />;
+  return <FiniteMines {...props} />;
 }
 
 function FiniteMines({ mode, seed, paused, sound, onHud, onFinish }: GameProps) {
