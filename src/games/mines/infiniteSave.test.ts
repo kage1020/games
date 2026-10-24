@@ -39,13 +39,18 @@ describe("infinite save", () => {
     expect(restoreProgress(state)?.span).toBe(40);
   });
 
+  it("AC-G-mines-17 rejects a save made before the mines were laid out this way", () => {
+    expect(restoreProgress({ ...saveProgress(played()), version: 1 })).toBeNull();
+    expect(restoreFrontier({ ...saveFrontier(explored()), version: 1 })).toBeNull();
+  });
+
   it("AC-G-mines-17 rejects anything it cannot read back", () => {
     const state = saveProgress(played());
     for (const broken of [
       null,
       "save",
       {},
-      { ...state, version: 2 },
+      { ...state, version: state.version + 1 },
       { ...state, seed: "11" },
       { ...state, start: [0] },
       { ...state, revealed: [1, 2, 3] },
@@ -99,7 +104,7 @@ describe("frontier save", () => {
       null,
       withoutHits,
       saveProgress(played()),
-      { ...state, version: 2 },
+      { ...state, version: state.version + 1 },
       { ...state, hits: [1, 2, 3] },
       { ...state, hits: [0.5, 0] },
       { ...state, revealed: "0,0" },

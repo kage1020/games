@@ -12,7 +12,8 @@ export interface InfiniteProgress<S = InfiniteState> {
   cursor: Cell;
 }
 
-const VERSION = 1;
+/** 地雷の置き方を変えたら上げる。違う版の保存は同じ盤面に戻せないので読み戻さない */
+const VERSION = 2;
 
 type Pair = [number, number];
 

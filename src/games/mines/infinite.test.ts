@@ -4,6 +4,7 @@ import {
   cellKey,
   createInfinite,
   DENSITY,
+  densityAt,
   type InfiniteState,
   isMine,
   neighbors,
@@ -29,7 +30,7 @@ function numberWithClosedNeighbours(state: InfiniteState): { x: number; y: numbe
 }
 
 describe("infinite mines", () => {
-  it("AC-G-mines-7 places mines from the seed and position only", () => {
+  it("AC-G-mines-7 places mines from the seed, the first cell and position only", () => {
     const a = started(7);
     const b = started(7);
     const c = started(8);
@@ -46,14 +47,73 @@ describe("infinite mines", () => {
     expect(same).toBeGreaterThan(differs);
   });
 
-  it("AC-G-mines-7 makes about 18% of cells mines", () => {
-    const state = started(3, 5000, 5000);
+  it("AC-G-mines-7 changes the share of mines smoothly by area, between 13% and 33%", () => {
+    expect(DENSITY).toEqual({ min: 0.13, max: 0.33 });
+    for (let seed = 1; seed <= 10; seed++) {
+      const board = { seed, start: { x: 0, y: 0 } };
+      let low = 1;
+      let high = 0;
+      let step = 0;
+      for (let x = 100; x < 220; x++) {
+        for (let y = 100; y < 220; y++) {
+          const density = densityAt(board, x, y);
+          low = Math.min(low, density);
+          high = Math.max(high, density);
+          step = Math.max(
+            step,
+            Math.abs(density - densityAt(board, x + 1, y)),
+            Math.abs(density - densityAt(board, x, y + 1)),
+          );
+        }
+      }
+      expect(low).toBeGreaterThanOrEqual(DENSITY.min);
+      expect(high).toBeLessThanOrEqual(DENSITY.max);
+      expect(low).toBeLessThan(0.17);
+      expect(high).toBeGreaterThan(0.29);
+      expect(step).toBeLessThan(0.03);
+    }
+  });
+
+  it("AC-G-mines-7 lays mines at the share of their area, about 23% overall", () => {
     let mines = 0;
-    const side = 200;
-    for (let x = 0; x < side; x++) for (let y = 0; y < side; y++) if (isMine(state, x, y)) mines++;
-    expect(DENSITY).toBe(0.18);
-    expect(mines / (side * side)).toBeGreaterThan(0.17);
-    expect(mines / (side * side)).toBeLessThan(0.19);
+    let cells = 0;
+    const sparse = { mines: 0, cells: 0 };
+    const dense = { mines: 0, cells: 0 };
+    for (let seed = 1; seed <= 10; seed++) {
+      const state = started(seed, 5000, 5000);
+      const board = { seed, start: { x: 5000, y: 5000 } };
+      for (let x = 0; x < 200; x++) {
+        for (let y = 0; y < 200; y++) {
+          const mine = isMine(state, x, y) ? 1 : 0;
+          const density = densityAt(board, x, y);
+          mines += mine;
+          cells++;
+          const area = density < 0.18 ? sparse : density > 0.28 ? dense : null;
+          if (area) {
+            area.mines += mine;
+            area.cells++;
+          }
+        }
+      }
+    }
+    expect(mines / cells).toBeGreaterThan(0.22);
+    expect(mines / cells).toBeLessThan(0.24);
+    expect(sparse.mines / sparse.cells).toBeLessThan(0.18);
+    expect(dense.mines / dense.cells).toBeGreaterThan(0.28);
+  });
+
+  it("AC-G-mines-7 makes the first cell the sparsest place", () => {
+    const middle = (DENSITY.min + DENSITY.max) / 2;
+    for (let seed = 1; seed <= 50; seed++) {
+      const board = { seed, start: { x: seed * 3, y: -seed } };
+      const { start } = board;
+      expect(densityAt(board, start.x, start.y)).toBeCloseTo(DENSITY.min);
+      for (let dx = -3; dx <= 3; dx++) {
+        for (let dy = -3; dy <= 3; dy++) {
+          expect(densityAt(board, start.x + dx, start.y + dy)).toBeLessThan(middle);
+        }
+      }
+    }
   });
 
   it("AC-G-mines-7 keeps the first cell and its neighbours free of mines", () => {

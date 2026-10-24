@@ -1,8 +1,12 @@
 /**
- * 地雷の割合。0 のマスは周り 9 マスに地雷がないときだけなので、割合を下げると 0 のマスが
- * つながって際限なく開き続ける。0.18 なら 0 のマスは 17% ほどで、広がりは小さく止まる
+ * 地雷の割合は場所によって min〜max の間で変わる。薄いところは大きく開き、濃いところでは 4 以上の数字が出る。
+ * 0 のマスは周り 9 マスに地雷がないときだけなので、割合が 12% を下回ると 0 のマスがつながって
+ * 際限なく開き続ける。min はそうならない割合
  */
-export const DENSITY = 0.18;
+export const DENSITY = { min: 0.13, max: 0.33 } as const;
+
+/** 濃淡の模様の目の大きさ（マス） */
+const PATCH = 12;
 
 export interface Cell {
   x: number;
@@ -37,15 +41,40 @@ function noise(seed: number, x: number, y: number): number {
   return (h >>> 0) / 2 ** 32;
 }
 
+const smoothstep = (t: number) => t * t * (3 - 2 * t);
+
+/**
+ * (x, y) の地雷の割合。最初のマスを原点に PATCH ごとの格子へシードから濃さを置き、その間をなだらかにつなぐ。
+ * 原点の格子はいちばん薄くして、最初の 1 手で大きく開きやすくする
+ */
+export function densityAt(
+  board: Pick<InfiniteState, "seed"> & { start: Cell },
+  x: number,
+  y: number,
+): number {
+  const seed = board.seed ^ 0x5bd1e995;
+  const gx = Math.floor((x - board.start.x) / PATCH);
+  const gy = Math.floor((y - board.start.y) / PATCH);
+  const tx = smoothstep((x - board.start.x) / PATCH - gx);
+  const ty = smoothstep((y - board.start.y) / PATCH - gy);
+  const at = (i: number, j: number) => (i === 0 && j === 0 ? 0 : noise(seed, i, j));
+  const a = at(gx, gy);
+  const b = at(gx + 1, gy);
+  const c = at(gx, gy + 1);
+  const d = at(gx + 1, gy + 1);
+  const shade = a + (b - a) * tx + (c - a) * ty + (a - b - c + d) * tx * ty;
+  return DENSITY.min + (DENSITY.max - DENSITY.min) * shade;
+}
+
 export function isMine(
   state: Pick<InfiniteState, "seed" | "start">,
   x: number,
   y: number,
 ): boolean {
-  const { start } = state;
+  const { seed, start } = state;
   if (start === null) return false;
   if (Math.abs(x - start.x) <= 1 && Math.abs(y - start.y) <= 1) return false;
-  return noise(state.seed, x, y) < DENSITY;
+  return noise(seed, x, y) < densityAt({ seed, start }, x, y);
 }
 
 /** 周り 8 マス */
